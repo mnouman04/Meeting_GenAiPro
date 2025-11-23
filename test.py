@@ -429,7 +429,7 @@ if 'processing' not in st.session_state:
     st.session_state.processing = False
 
 # Utility function for exponential backoff
-def exponential_backoff(fn, max_retries=4, initial_delay=1.0):
+def exponential_backoff(fn, max_retries=4, initial_delay=2.0):
     """Retry function with exponential backoff for rate limiting"""
     delay = initial_delay
     for attempt in range(max_retries):
@@ -437,10 +437,11 @@ def exponential_backoff(fn, max_retries=4, initial_delay=1.0):
             return fn()
         except Exception as e:
             msg = str(e).lower()
-            if '429' in msg or 'quota' in msg or 'rate limit' in msg or 'exceeded' in msg:
+            if '429' in msg or 'quota' in msg or 'rate limit' in msg or 'exceeded' in msg or 'resource' in msg:
                 if attempt < max_retries - 1:
+                    st.warning(f"⏳ Rate limited. Waiting {delay:.0f} seconds... (attempt {attempt + 1}/{max_retries})")
                     time.sleep(delay)
-                    delay *= 2
+                    delay = min(delay * 2, 60)  # exponential backoff, max 60 seconds
                     continue
                 else:
                     raise
@@ -503,24 +504,7 @@ with st.sidebar:
     
     if gemini_api_key:
         st.success("✅ Gemini configured")
-        
-        if st.button("🧪 Test Connection", use_container_width=True):
-            with st.spinner("Testing API..."):
-                try:
-                    genai.configure(api_key=gemini_api_key)
-                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
-                    response = model.generate_content("Say 'OK'")
-                    
-                    if response.text:
-                        st.success(f"✅ Connected successfully!")
-                    else:
-                        raise Exception("No response")
-                except Exception as e:
-                    error_msg = str(e)
-                    if '429' in error_msg or 'quota' in error_msg.lower():
-                        st.error("❌ Quota exceeded. Try again later or check your billing.")
-                    else:
-                        st.error(f"❌ Connection failed: {error_msg[:50]}")
+        st.info("💡 **Don't test** - Testing wastes your quota! Just use the Generate button.", icon="ℹ️")
     else:
         st.warning("⚠️ Gemini key required")
         st.markdown("""
@@ -866,12 +850,15 @@ with tab3:
                         try:
                             genai.configure(api_key=gemini_api_key)
                             
-                            prompt = f"""Analyze this meeting transcript and generate comprehensive meeting minutes in JSON format.
+                            # Limit transcript to reduce token usage
+                            transcript_text = st.session_state.transcript[:4000]  # Max 4000 characters
+                            
+                            prompt = f"""Analyze this meeting transcript and create meeting minutes in JSON format.
 
 Transcript:
-{st.session_state.transcript}
+{transcript_text}
 
-Return ONLY valid JSON in this exact structure:
+Return ONLY valid JSON:
 {{
     "meeting_title": "Brief descriptive title",
     "date": "{datetime.now().strftime('%B %d, %Y')}",
@@ -889,61 +876,145 @@ Return ONLY valid JSON in this exact structure:
     "next_meeting": "Next meeting info or null"
 }}"""
                             
-                            model_names = [
-                                'gemini-2.0-flash-exp',
-                                'gemini-1.5-flash',
-                                'gemini-1.5-pro',
-                                'models/gemini-2.0-flash-exp',
-                                'models/gemini-1.5-flash'
-                            ]
-                            
+                            # Use ONLY ONE model to avoid quota exhaustion
+                            model_name = 'gemini-2.5-flash'
                             minutes_json = None
-                            working_model_name = None
+                            last_error = None
                             
-                            for model_name in model_names:
+                            try:
+                                st.info(f"🔄 Using {model_name}...")
+                                
+                                # Safety settings to reduce false positives
+                                safety_settings = [
+                                    {
+                                        "category": "HARM_CATEGORY_HARASSMENT",
+                                        "threshold": "BLOCK_NONE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                                        "threshold": "BLOCK_NONE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                                        "threshold": "BLOCK_NONE"
+                                    },
+                                    {
+                                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                                        "threshold": "BLOCK_NONE"
+                                    },
+                                ]
+                                
+                                # Create model with optimized settings
+                                model = genai.GenerativeModel(
+                                    model_name,
+                                    generation_config={
+                                        "temperature": 0.7,
+                                        "max_output_tokens": 2048,  # Increased to allow complete JSON responses
+                                    },
+                                    safety_settings=safety_settings
+                                )
+                                
+                                # Make SINGLE API call - no retries
+                                response = model.generate_content(prompt)
+                                
+                                # Check if response was blocked or has issues
+                                if not response:
+                                    raise Exception("Empty response from Gemini")
+                                
+                                # Check candidates and finish reason
+                                if not response.candidates:
+                                    raise Exception("No candidates in response - possibly blocked by safety filters")
+                                
+                                candidate = response.candidates[0]
+                                finish_reason = candidate.finish_reason
+                                
+                                # Check finish reason - be more lenient with MAX_TOKENS
+                                if finish_reason == 3:  # SAFETY
+                                    raise Exception(f"Response blocked by safety filters. Try rephrasing your transcript or using a shorter excerpt.")
+                                elif finish_reason not in [1, 2]:  # 1 = STOP, 2 = MAX_TOKENS (acceptable)
+                                    finish_reasons = {
+                                        0: "FINISH_REASON_UNSPECIFIED",
+                                        1: "STOP",
+                                        2: "MAX_TOKENS",
+                                        3: "SAFETY",
+                                        4: "RECITATION",
+                                        5: "OTHER"
+                                    }
+                                    reason_name = finish_reasons.get(finish_reason, f"Unknown ({finish_reason})")
+                                    raise Exception(f"Response ended with: {reason_name}")
+                                
+                                # If MAX_TOKENS, warn but continue (we'll try to extract partial JSON)
+                                if finish_reason == 2:
+                                    st.warning("⚠️ Response was truncated, attempting to extract valid JSON...", icon="⚠️")
+                                
+                                # Now safely access text
+                                if not hasattr(response, 'text') or not response.text:
+                                    raise Exception("Response has no text content")
+                                
+                                response_text = response.text.strip()
+                                
+                                # Clean JSON markers
+                                if "```json" in response_text:
+                                    response_text = response_text.split("```json")[1].split("```")[0]
+                                elif "```" in response_text:
+                                    response_text = response_text.split("```")[1].split("```")[0]
+                                
+                                response_text = response_text.strip()
+                                
+                                # Try to parse JSON, handle truncation
                                 try:
-                                    def try_model():
-                                        model = genai.GenerativeModel(model_name)
-                                        resp = model.generate_content(prompt)
-                                        txt = getattr(resp, 'text', None)
-                                        if not txt:
-                                            raise Exception("Empty response")
-                                        return txt
-                                    
-                                    response_text = exponential_backoff(try_model, max_retries=3, initial_delay=2.0)
-                                    response_text = response_text.strip().replace("```json", "").replace("```", "").strip()
                                     minutes_json = json.loads(response_text)
-                                    working_model_name = model_name
-                                    break
-                                    
-                                except Exception as model_err:
-                                    error_msg = str(model_err).lower()
-                                    if '429' in error_msg or 'quota' in error_msg or 'exceeded' in error_msg:
-                                        st.warning(f"⚠️ {model_name}: Quota exceeded, trying next model...", icon="⚠️")
-                                        continue
+                                except json.JSONDecodeError as json_err:
+                                    # If JSON is incomplete due to truncation, try to fix it
+                                    if finish_reason == 2:  # MAX_TOKENS
+                                        st.warning("⚠️ Attempting to repair truncated JSON...", icon="🔧")
+                                        # Try to close unclosed structures
+                                        if response_text.count('{') > response_text.count('}'):
+                                            response_text += '}' * (response_text.count('{') - response_text.count('}'))
+                                        if response_text.count('[') > response_text.count(']'):
+                                            response_text += ']' * (response_text.count('[') - response_text.count(']'))
+                                        # Try parsing again
+                                        try:
+                                            minutes_json = json.loads(response_text)
+                                            st.success("✅ Successfully repaired JSON!", icon="✅")
+                                        except:
+                                            raise json_err
                                     else:
-                                        continue
+                                        raise json_err
+                                
+                            except json.JSONDecodeError as json_err:
+                                last_error = f"Invalid JSON: {str(json_err)}"
+                                st.error(f"❌ Error: {last_error[:200]}", icon="❌")
+                                st.error(f"👁️ Response preview: {response_text[:500]}...", icon="🔍")
+                            except Exception as model_err:
+                                last_error = str(model_err)
+                                st.error(f"❌ Error: {last_error[:200]}", icon="❌")
                             
                             if not minutes_json:
-                                st.markdown("""
+                                st.markdown(f"""
                                     <div class='error-card'>
                                         <strong>❌ All Gemini models are currently unavailable</strong><br/><br/>
-                                        <strong>Possible reasons:</strong><br/>
-                                        • API quota exceeded (429 error)<br/>
-                                        • Rate limit reached<br/>
-                                        • Billing issue<br/><br/>
+                                        <strong>Last error:</strong> {last_error[:200] if last_error else 'Unknown'}<br/><br/>
+                                        <strong>Common reasons:</strong><br/>
+                                        • <strong>Free tier limits:</strong> Google Gemini free tier has strict rate limits (60 requests/minute)<br/>
+                                        • <strong>Account restrictions:</strong> New accounts may have lower limits<br/>
+                                        • <strong>Region limits:</strong> Some regions have tighter restrictions<br/><br/>
                                         <strong>Solutions:</strong><br/>
-                                        1. Wait a few minutes and try again<br/>
-                                        2. Check your quota at <a href='https://aistudio.google.com' target='_blank'>Google AI Studio</a><br/>
-                                        3. Verify billing is enabled<br/>
-                                        4. Try using a different API key
+                                        1. <strong>Wait 1-2 minutes</strong> and try again (rate limits reset quickly)<br/>
+                                        2. Check your API usage at <a href='https://aistudio.google.com/apikey' target='_blank'>Google AI Studio</a><br/>
+                                        3. Try creating a <strong>new API key</strong> with a different Google account<br/>
+                                        4. Consider using a <strong>paid billing account</strong> for higher limits<br/>
+                                        5. Try using the demo transcript first (less data = lower quota usage)<br/><br/>
+                                        <strong>⚠️ Important:</strong> Even new accounts have limits. Wait a bit before retrying!
                                     </div>
                                 """, unsafe_allow_html=True)
+                                st.info("💡 **Tip:** Try clicking the '🧪 Load Demo' button in the 'Paste Transcript' tab, then come back here. Shorter transcripts use less quota!", icon="💡")
                                 st.stop()
                             
                             st.session_state.minutes = minutes_json
-                            st.success(f"✅ Minutes generated using {working_model_name}!", icon="✅")
+                            st.success(f"✅ Minutes generated successfully using {model_name}!", icon="✅")
                             st.balloons()
+                            time.sleep(0.5)
                             st.rerun()
                             
                         except json.JSONDecodeError as e:
