@@ -17,11 +17,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Professional CSS styling - Black and Purple Theme with Animations
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
     
     * {
         font-family: 'Inter', sans-serif !important;
@@ -29,7 +29,7 @@ st.markdown("""
     
     html, body {
         background: #0a0a0a;
-        color: #e0d5ff;
+        color: #f5f1ff;
     }
     
     .stApp {
@@ -41,7 +41,7 @@ st.markdown("""
     }
     
     .main > div {
-        padding: 2rem !important;
+        padding: 2.5rem !important;
     }
     
     section[data-testid="stAppViewContainer"] {
@@ -52,11 +52,11 @@ st.markdown("""
         display: none !important;
     }
     
-    /* Main heading animation */
+    /* Premium animation keyframes */
     @keyframes slideInDown {
         from {
             opacity: 0;
-            transform: translateY(-30px);
+            transform: translateY(-40px);
         }
         to {
             opacity: 1;
@@ -79,7 +79,7 @@ st.markdown("""
     @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(25px);
         }
         to {
             opacity: 1;
@@ -87,64 +87,129 @@ st.markdown("""
         }
     }
     
+    @keyframes pulseGlow {
+        0%, 100% {
+            text-shadow: 0 0 20px rgba(233, 179, 251, 0.3), 0 0 40px rgba(111, 0, 255, 0.2);
+        }
+        50% {
+            text-shadow: 0 0 30px rgba(233, 179, 251, 0.6), 0 0 60px rgba(111, 0, 255, 0.4);
+        }
+    }
+    
+    @keyframes smoothBorder {
+        0% {
+            border-color: rgba(111, 0, 255, 0.3);
+        }
+        50% {
+            border-color: rgba(233, 179, 251, 0.6);
+        }
+        100% {
+            border-color: rgba(111, 0, 255, 0.3);
+        }
+    }
+    
+    /* Main heading - MUCH LARGER and prominent */
     h1 {
-        background: linear-gradient(135deg, #6F00FF, #E9B3FB, #6F00FF);
-        background-size: 200% 200%;
+        background: linear-gradient(135deg, #8B5CF6, #EC4899, #6F00FF, #8B5CF6);
+        background-size: 300% 300%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        font-size: 3rem !important;
-        font-weight: 800 !important;
+        font-family: 'Space Grotesk', sans-serif !important;
+        font-size: 4.2rem !important;
+        font-weight: 900 !important;
         text-align: center;
-        margin-bottom: 0.5rem !important;
-        animation: slideInDown 0.8s ease-out, gradientShift 3s ease-in-out infinite !important;
+        margin-bottom: 0.3rem !important;
+        letter-spacing: -1px !important;
+        animation: slideInDown 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), gradientShift 4s ease-in-out infinite !important;
+        line-height: 1.1 !important;
+    }
+    
+    /* Subtitle with enhanced styling */
+    .subtitle {
+        text-align: center;
+        color: #e9b3fb !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 1.35rem !important;
+        font-weight: 500 !important;
+        margin-bottom: 2.5rem !important;
+        animation: fadeInUp 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both !important;
+        letter-spacing: 0.3px !important;
     }
     
     h2 {
-        color: #e9b3fb !important;
-        font-size: 1.8rem !important;
+        color: #f5f1ff !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 2rem !important;
         font-weight: 700 !important;
-        animation: fadeInUp 0.6s ease-out !important;
+        animation: fadeInUp 0.7s ease-out !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
     }
     
     h3 {
-        color: #b088ff !important;
+        color: #d4a5ff !important;
+        font-family: 'Poppins', sans-serif !important;
         font-weight: 600 !important;
+        animation: fadeInUp 0.6s ease-out !important;
+        transition: color 0.4s ease !important;
     }
     
     h4 {
-        color: #d4a5ff !important;
+        color: #e9b3fb !important;
         font-weight: 600 !important;
+    }
+    
+    /* Generated content text - OFF-WHITE for visibility */
+    .generated-content {
+        color: #f5f1ff !important;
+        background: rgba(20, 15, 40, 0.7) !important;
+        border: 1px solid rgba(111, 0, 255, 0.2) !important;
+        border-radius: 12px !important;
+        padding: 1.5rem !important;
+        line-height: 1.7 !important;
+        font-size: 1rem !important;
+        animation: fadeInUp 0.7s ease-out !important;
+        transition: all 0.4s ease !important;
+    }
+    
+    .generated-content:hover {
+        border-color: rgba(233, 179, 251, 0.4) !important;
+        background: rgba(20, 15, 40, 0.9) !important;
     }
     
     p, label, span {
         color: #e0d5ff !important;
     }
     
-    .subtitle {
-        text-align: center;
-        color: #b088ff !important;
-        font-size: 1.1rem;
-        margin-bottom: 2rem;
-        animation: fadeInUp 0.8s ease-out 0.2s both !important;
-    }
-    
     /* Header section with image */
     .header-section {
         position: relative;
-        height: 300px;
-        border-radius: 16px;
+        height: 320px;
+        border-radius: 18px;
         overflow: hidden;
-        margin-bottom: 2rem;
-        box-shadow: 0 10px 40px rgba(111, 0, 255, 0.2);
-        animation: fadeInUp 0.6s ease-out !important;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 15px 50px rgba(111, 0, 255, 0.25);
+        animation: fadeInUp 0.7s ease-out !important;
+        border: 2px solid rgba(233, 179, 251, 0.1);
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    
+    .header-section:hover {
+        box-shadow: 0 20px 70px rgba(111, 0, 255, 0.35);
+        border-color: rgba(233, 179, 251, 0.2);
+        transform: translateY(-2px);
     }
     
     .header-image {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: brightness(0.7) contrast(1.1);
+        filter: brightness(0.65) contrast(1.15) saturate(1.1);
+        transition: filter 0.6s ease !important;
+    }
+    
+    .header-section:hover .header-image {
+        filter: brightness(0.75) contrast(1.2) saturate(1.2);
     }
     
     .header-overlay {
@@ -153,7 +218,7 @@ st.markdown("""
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(111, 0, 255, 0.3), rgba(59, 2, 112, 0.5));
+        background: linear-gradient(135deg, rgba(111, 0, 255, 0.35), rgba(59, 2, 112, 0.55));
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -162,96 +227,132 @@ st.markdown("""
     
     .header-title {
         font-family: 'Poppins', sans-serif !important;
-        font-size: 2.2rem !important;
-        font-weight: 700 !important;
-        color: white !important;
+        font-size: 2.5rem !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
         text-align: center;
-        text-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        animation: slideInDown 0.8s ease-out !important;
+        text-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+        animation: slideInDown 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        letter-spacing: -0.5px !important;
     }
     
     .header-subtitle {
-        font-size: 1rem !important;
+        font-size: 1.1rem !important;
         color: #e9b3fb !important;
         text-align: center;
-        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-        margin-top: 0.5rem;
-        animation: fadeInUp 0.8s ease-out 0.2s both !important;
+        text-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
+        margin-top: 0.7rem;
+        animation: fadeInUp 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both !important;
+        font-weight: 500 !important;
     }
     
     .stButton > button {
-        background: linear-gradient(135deg, #6F00FF, #3B0270) !important;
+        background: linear-gradient(135deg, #8B5CF6, #6F00FF) !important;
         color: white !important;
         border: 2px solid #6F00FF !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        padding: 0.75rem 1.5rem !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 25px rgba(111, 0, 255, 0.5) !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        padding: 0.85rem 1.8rem !important;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        box-shadow: 0 6px 30px rgba(111, 0, 255, 0.4) !important;
+        font-size: 1rem !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-3px) !important;
-        box-shadow: 0 8px 35px rgba(111, 0, 255, 0.7) !important;
+        transform: translateY(-4px) scale(1.02) !important;
+        box-shadow: 0 12px 50px rgba(111, 0, 255, 0.6) !important;
+        background: linear-gradient(135deg, #A78BFA, #7C3AED) !important;
+    }
+    
+    .stButton > button:active {
+        transform: translateY(-1px) scale(0.98) !important;
     }
     
     .stTextInput > div > div > input {
-        background: rgba(15, 15, 35, 0.6) !important;
-        border: 2px solid rgba(111, 0, 255, 0.3) !important;
-        border-radius: 8px !important;
-        color: #e0d5ff !important;
+        background: rgba(15, 15, 35, 0.7) !important;
+        border: 2px solid rgba(111, 0, 255, 0.2) !important;
+        border-radius: 10px !important;
+        color: #f5f1ff !important;
+        transition: all 0.3s ease !important;
+        font-size: 1rem !important;
+    }
+    
+    .stTextInput > div > div > input:focus {
+        border-color: rgba(233, 179, 251, 0.5) !important;
+        box-shadow: 0 0 15px rgba(111, 0, 255, 0.2) !important;
+        background: rgba(15, 15, 35, 0.9) !important;
     }
     
     .stTextArea > div > div > textarea {
-        background: rgba(15, 15, 35, 0.6) !important;
-        border: 2px solid rgba(111, 0, 255, 0.3) !important;
-        border-radius: 8px !important;
-        color: #e0d5ff !important;
+        background: rgba(15, 15, 35, 0.7) !important;
+        border: 2px solid rgba(111, 0, 255, 0.2) !important;
+        border-radius: 10px !important;
+        color: #f5f1ff !important;
         font-family: 'Monaco', monospace !important;
+        transition: all 0.3s ease !important;
+        font-size: 1rem !important;
+    }
+    
+    .stTextArea > div > div > textarea:focus {
+        border-color: rgba(233, 179, 251, 0.5) !important;
+        box-shadow: 0 0 15px rgba(111, 0, 255, 0.2) !important;
+        background: rgba(15, 15, 35, 0.9) !important;
     }
     
     .stTabs [data-baseweb="tab-list"] {
-        background-color: rgba(26, 10, 46, 0.6) !important;
+        background-color: rgba(26, 10, 46, 0.5) !important;
         border-radius: 12px !important;
+        border-bottom: 2px solid rgba(111, 0, 255, 0.1) !important;
+        gap: 0.5rem !important;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px !important;
+        border-radius: 10px !important;
         color: #9d88b8 !important;
+        transition: all 0.4s ease !important;
+        font-weight: 600 !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #6F00FF, #3B0270) !important;
-        color: white !important;
+        background: linear-gradient(135deg, rgba(111, 0, 255, 0.3), rgba(59, 2, 112, 0.2)) !important;
+        color: #e9b3fb !important;
+        border-bottom: 3px solid #6F00FF !important;
     }
     
     .success-card {
-        background: linear-gradient(135deg, rgba(15, 200, 100, 0.15), rgba(15, 180, 80, 0.1)) !important;
-        border-left: 4px solid #20c65e !important;
-        border-radius: 8px !important;
-        padding: 1rem !important;
-        color: #90ee90 !important;
+        background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08)) !important;
+        border-left: 4px solid #22c55e !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        color: #86efac !important;
+        animation: fadeInUp 0.5s ease-out !important;
+        font-weight: 500 !important;
     }
     
     .info-card {
         background: linear-gradient(135deg, rgba(111, 0, 255, 0.15), rgba(59, 2, 112, 0.1)) !important;
-        border-left: 4px solid #6F00FF !important;
-        border-radius: 8px !important;
-        padding: 1rem !important;
-        color: #d4a5ff !important;
+        border-left: 4px solid #8B5CF6 !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        color: #e9b3fb !important;
+        animation: fadeInUp 0.5s ease-out !important;
+        font-weight: 500 !important;
     }
     
     .warning-card {
-        background: linear-gradient(135deg, rgba(255, 193, 7, 0.15), rgba(255, 152, 0, 0.1)) !important;
-        border-left: 4px solid #FFB74D !important;
-        border-radius: 8px !important;
-        padding: 1rem !important;
-        color: #ffcc80 !important;
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08)) !important;
+        border-left: 4px solid #ef4444 !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        color: #fca5a5 !important;
+        animation: fadeInUp 0.5s ease-out !important;
+        font-weight: 500 !important;
     }
     
     a {
-        color: #6F00FF !important;
+        color: #8B5CF6 !important;
         text-decoration: none !important;
+        transition: color 0.3s ease !important;
     }
     
     a:hover {
@@ -279,7 +380,7 @@ if 'processing' not in st.session_state:
 
 # Main Header
 st.markdown("<h1>📝 Smart Meeting Minutes</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Transform your meeting recordings into actionable insights with AI</p>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>✨ Transform your meeting recordings into actionable insights with AI ✨</p>", unsafe_allow_html=True)
 
 # Main Tabs
 tab1, tab2, tab3 = st.tabs(["🎤 Upload Audio", "✍️ Paste Transcript", "📊 Results"])
@@ -421,7 +522,7 @@ with tab3:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             if st.button("🚀 Generate Meeting Minutes with AI", key="generate_btn", use_container_width=True):
-                with st.spinner("🤖 Generating minutes..."):
+                with st.spinner("🤖 Generating minutes with AI..."):
                     try:
                         genai.configure(api_key=gemini_api_key)
                         model = genai.GenerativeModel('gemini-2.0-flash')
@@ -462,16 +563,16 @@ Transcript:
                         response = model.generate_content(prompt)
                         st.session_state.minutes = response.text
                         
-                        st.markdown('<div class="success-card"><strong>✅ Minutes generated!</strong></div>', unsafe_allow_html=True)
+                        st.markdown('<div class="success-card"><strong>✅ Minutes generated successfully!</strong></div>', unsafe_allow_html=True)
                         st.rerun()
                         
                     except Exception as e:
-                        st.markdown(f'<div class="warning-card"><strong>❌ Failed: {str(e)[:80]}</strong></div>', unsafe_allow_html=True)
+                        st.markdown(f'<div class="warning-card"><strong>❌ Generation failed: {str(e)[:80]}</strong></div>', unsafe_allow_html=True)
         
         if st.session_state.minutes:
             st.markdown("---")
-            st.markdown("### 📋 Generated Meeting Minutes")
-            st.markdown(st.session_state.minutes)
+            st.markdown("<h2>📋 Generated Meeting Minutes</h2>", unsafe_allow_html=True)
+            st.markdown(f'<div class="generated-content">{st.session_state.minutes}</div>', unsafe_allow_html=True)
             
             col1, col2 = st.columns(2)
             with col1:
