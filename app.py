@@ -1,6 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
-from openai import OpenAI
+import assemblyai as aai
 from datetime import datetime
 import json
 import tempfile
@@ -458,24 +458,24 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # OpenAI Section
-    st.markdown("#### 🔑 OpenAI API Key")
+    # AssemblyAI Section
+    st.markdown("#### 🔑 AssemblyAI API Key")
     st.caption("Required for audio transcription")
-    openai_api_key = st.text_input(
-        "OpenAI API Key",
+    assemblyai_api_key = st.text_input(
+        "AssemblyAI API Key",
         type="password",
-        placeholder="sk-...",
-        value=os.getenv("OPENAI_API_KEY", ""),
-        key="openai_key",
+        placeholder="Enter your AssemblyAI API key",
+        value=os.getenv("ASSEMBLYAI_API_KEY", "58e21640448c4658b483b99c076b9ab2"),
+        key="assemblyai_key",
         label_visibility="collapsed"
     )
     
-    if openai_api_key:
-        st.success("✅ OpenAI configured")
+    if assemblyai_api_key:
+        st.success("✅ AssemblyAI configured")
     else:
-        st.warning("⚠️ OpenAI key required")
+        st.warning("⚠️ AssemblyAI key required")
         st.markdown("""
-        <a href='https://platform.openai.com/api-keys' target='_blank' class='api-link'>
+        <a href='https://www.assemblyai.com/dashboard/signup' target='_blank' class='api-link'>
             Get API Key
         </a>
         """, unsafe_allow_html=True)
@@ -549,7 +549,7 @@ with st.sidebar:
     
     # Pricing
     st.markdown("### 💰 Pricing")
-    st.markdown("**OpenAI:** $0.006/min")
+    st.markdown("**AssemblyAI:** $0.00025/sec (~$0.015/min)")
     st.markdown("**Gemini:** FREE (1M tokens/day)")
 
 # Main Tabs
@@ -560,7 +560,7 @@ with tab1:
     st.markdown("""
         <div class='banner'>
             <h2>🎤 Upload Meeting Recording</h2>
-            <p>Upload your audio file and let AI transcribe it automatically using OpenAI Whisper</p>
+            <p>Upload your audio file and let AI transcribe it automatically using AssemblyAI</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -570,53 +570,173 @@ with tab1:
         audio_file = st.file_uploader(
             "Choose an audio file",
             type=['mp3', 'wav', 'm4a', 'ogg', 'flac', 'webm'],
-            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM"
+            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM",
+            key="audio_uploader"
         )
         
         if audio_file:
-            file_size_mb = audio_file.size / (1024 * 1024)
+            file_size_bytes = audio_file.size
+            file_size_kb = file_size_bytes / 1024
+            file_size_mb = file_size_bytes / (1024 * 1024)
+            
+            # Display file size in appropriate unit
+            if file_size_mb >= 1:
+                size_display = f"{file_size_mb:.2f} MB"
+            else:
+                size_display = f"{file_size_kb:.2f} KB"
+            
             st.markdown(f"""
                 <div class='success-card'>
                     <strong>✅ File Uploaded Successfully</strong><br/>
                     📁 {audio_file.name}<br/>
-                    💾 Size: {file_size_mb:.2f} MB
+                    💾 Size: {size_display} ({file_size_bytes:,} bytes)
                 </div>
             """, unsafe_allow_html=True)
             
+            # Reset file pointer before reading
+            audio_file.seek(0)
             st.audio(audio_file)
             
             st.markdown("<br/>", unsafe_allow_html=True)
             
             if st.button("🚀 Transcribe Audio", key="transcribe_btn", use_container_width=True):
-                if not openai_api_key:
-                    st.error("⚠️ Please enter your OpenAI API key in the sidebar first!", icon="⚠️")
+                if not assemblyai_api_key:
+                    st.error("⚠️ Please enter your AssemblyAI API key in the sidebar first!", icon="⚠️")
                 else:
                     with st.spinner("🎯 Transcribing audio... Please wait..."):
+                        tmp_file_path = None
                         try:
-                            client = OpenAI(api_key=openai_api_key)
+                            # Reset file pointer to beginning before reading
+                            audio_file.seek(0)
                             
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(audio_file.name)[1]) as tmp_file:
-                                tmp_file.write(audio_file.getvalue())
+                            # Read audio file data
+                            audio_data = audio_file.read()
+                            file_size = len(audio_data)
+                            
+                            # Display file size in appropriate unit
+                            if file_size >= 1024 * 1024:
+                                size_str = f"{file_size / (1024*1024):.2f} MB"
+                            elif file_size >= 1024:
+                                size_str = f"{file_size / 1024:.2f} KB"
+                            else:
+                                size_str = f"{file_size} bytes"
+                            
+                            st.info(f"📊 Processing file: {size_str} ({file_size:,} bytes)")
+                            
+                            if file_size == 0:
+                                st.error("❌ Audio file is empty (0 bytes). Please upload a valid audio file with actual content.", icon="❌")
+                                st.warning("⚠️ Try re-uploading your audio file or use a different file.")
+                                raise ValueError("Audio file is empty")
+                            
+                            if file_size < 1024:
+                                st.error(f"❌ File is too small ({file_size} bytes). This is likely not a valid audio file.", icon="❌")
+                                st.warning("⚠️ Please upload a proper audio file (should be at least several KB in size)")
+                                raise ValueError(f"File too small: {file_size} bytes")
+                            
+                            # Set AssemblyAI API key
+                            aai.settings.api_key = assemblyai_api_key.strip()
+                            
+                            # Save audio file temporarily with proper extension
+                            file_extension = os.path.splitext(audio_file.name)[1].lower()
+                            if not file_extension:
+                                file_extension = '.wav'
+                            
+                            # Ensure extension is valid
+                            valid_extensions = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.webm']
+                            if file_extension not in valid_extensions:
+                                st.warning(f"⚠️ Unusual file extension: {file_extension}. Proceeding anyway...")
+                            
+                            # Create temp file and write audio data
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension, mode='wb') as tmp_file:
+                                tmp_file.write(audio_data)
+                                tmp_file.flush()
+                                os.fsync(tmp_file.fileno())  # Force write to disk
                                 tmp_file_path = tmp_file.name
                             
-                            with open(tmp_file_path, "rb") as audio_data:
-                                transcript_response = client.audio.transcriptions.create(
-                                    model="whisper-1",
-                                    file=audio_data,
-                                    response_format="text"
-                                )
+                            # Verify file was written correctly
+                            if not os.path.exists(tmp_file_path):
+                                raise ValueError("Failed to save audio file temporarily.")
                             
-                            os.unlink(tmp_file_path)
-                            st.session_state.transcript = transcript_response
+                            saved_size = os.path.getsize(tmp_file_path)
+                            if saved_size == 0:
+                                raise ValueError("Saved file is empty (0 bytes).")
+                            
+                            if saved_size != file_size:
+                                st.warning(f"⚠️ File size mismatch: Original {file_size} bytes, Saved {saved_size} bytes")
+                            
+                            # Display saved file size
+                            if saved_size >= 1024 * 1024:
+                                saved_str = f"{saved_size / (1024*1024):.2f} MB"
+                            elif saved_size >= 1024:
+                                saved_str = f"{saved_size / 1024:.2f} KB"
+                            else:
+                                saved_str = f"{saved_size} bytes"
+                            
+                            st.info(f"✅ Audio file saved: {saved_str} ({saved_size:,} bytes)")
+                            
+                            # Configure transcription - remove speech_model parameter for simpler config
+                            config = aai.TranscriptionConfig()
+                            
+                            # Create transcriber and transcribe
+                            st.info("🚀 Starting transcription with AssemblyAI...")
+                            transcriber = aai.Transcriber(config=config)
+                            transcript = transcriber.transcribe(tmp_file_path)
+                            
+                            # The transcribe method is blocking and waits for completion
+                            # Check for errors
+                            if transcript.status == "error":
+                                raise RuntimeError(f"Transcription failed: {transcript.error}")
+                            
+                            # Save transcript to session state
+                            st.session_state.transcript = transcript.text
                             
                             st.success("✅ Transcription completed successfully!", icon="✅")
                             st.balloons()
-                            st.rerun()
                             
                         except Exception as e:
-                            st.error(f"❌ Transcription failed: {str(e)}", icon="❌")
-                            if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
-                                os.unlink(tmp_file_path)
+                            error_msg = str(e)
+                            st.error(f"❌ Error: {error_msg}", icon="❌")
+                            
+                            # Get file size safely
+                            try:
+                                current_file_size = len(audio_file.read()) if audio_file else 0
+                            except:
+                                current_file_size = 0
+                            
+                            # Provide specific guidance based on error
+                            if "Invalid API key" in error_msg or "401" in error_msg or "Unauthorized" in error_msg:
+                                st.warning("🔑 Your API key appears to be invalid. Please verify:", icon="⚠️")
+                                st.markdown("- Check for extra spaces before/after the key")
+                                st.markdown("- Ensure you copied the complete key from AssemblyAI dashboard")
+                                st.markdown("- Try generating a new API key")
+                            elif "empty" in error_msg.lower() or "too small" in error_msg.lower() or current_file_size < 1024:
+                                st.warning("📁 Audio file issue:", icon="⚠️")
+                                st.markdown(f"- Current file size: {current_file_size} bytes")
+                                st.markdown("- The file appears to be corrupted or empty")
+                                st.markdown("- Try re-uploading your audio file")
+                                st.markdown("- Try a different audio file")
+                                st.markdown("- Make sure you're uploading an actual audio recording, not a text file")
+                            elif "Upload failed" in error_msg:
+                                st.warning("🌐 Upload issue detected:", icon="⚠️")
+                                st.markdown(f"- File size being uploaded: {current_file_size} bytes")
+                                st.markdown("- If file shows as 0 bytes, the file is corrupted or empty")
+                                st.markdown("- Try removing and re-uploading the file")
+                                st.markdown("- Check if the file plays properly on your computer")
+                                st.markdown("- Try converting the audio to a different format (e.g., MP3)")
+                            else:
+                                st.info("💡 Troubleshooting tips:", icon="💡")
+                                st.markdown("- Verify your API key is correct")
+                                st.markdown("- Check your internet connection")
+                                st.markdown("- Make sure the audio file is not corrupted")
+                                st.markdown("- Try a different audio file")
+                        
+                        finally:
+                            # Clean up temp file
+                            if tmp_file_path and os.path.exists(tmp_file_path):
+                                try:
+                                    os.unlink(tmp_file_path)
+                                except:
+                                    pass
     
     with col2:
         st.markdown("""
@@ -1009,7 +1129,7 @@ st.markdown("---")
 st.markdown("""
     <div style='text-align: center; padding: 2rem; color: white;'>
         <p style='font-size: 1.1rem; margin-bottom: 0.5rem; color: rgba(255,255,255,0.9);'>
-            Built with ❤️ using Streamlit, OpenAI Whisper & Google Gemini
+            Built with ❤️ using Streamlit, AssemblyAI & Google Gemini
         </p>
         <p style='color: rgba(255,255,255,0.7);'>
             🚀 Transform meetings into actionable insights in seconds

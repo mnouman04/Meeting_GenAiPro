@@ -461,22 +461,29 @@ with st.sidebar:
     # AssemblyAI Section
     st.markdown("#### 🔑 AssemblyAI API Key")
     st.caption("Required for audio transcription")
+    
+    st.info("⚠️ **Important:** The default API key is invalid. Please get your own free API key from AssemblyAI!", icon="ℹ️")
+    
     assemblyai_api_key = st.text_input(
         "AssemblyAI API Key",
         type="password",
-        placeholder="Enter your AssemblyAI API key",
-        value=os.getenv("ASSEMBLYAI_API_KEY", "58e21640448c4658b483b99c076b9ab2"),
+        placeholder="Enter your valid AssemblyAI API key here",
+        value=os.getenv("ASSEMBLYAI_API_KEY", ""),
         key="assemblyai_key",
         label_visibility="collapsed"
     )
     
     if assemblyai_api_key:
-        st.success("✅ AssemblyAI configured")
+        if len(assemblyai_api_key) < 20:
+            st.warning("⚠️ API key looks too short - please check it")
+        else:
+            st.success("✅ AssemblyAI key entered")
     else:
         st.warning("⚠️ AssemblyAI key required")
-        st.markdown("""
-        <a href='https://www.assemblyai.com/dashboard/signup' target='_blank' class='api-link'>
-            Get API Key
+    
+    st.markdown("""
+        <a href='https://www.assemblyai.com/dashboard/signup' target='_blank' class='api-link' style='display: inline-block; margin-top: 0.5rem; padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 8px;'>
+            🔗 Get FREE API Key from AssemblyAI
         </a>
         """, unsafe_allow_html=True)
     
@@ -570,19 +577,31 @@ with tab1:
         audio_file = st.file_uploader(
             "Choose an audio file",
             type=['mp3', 'wav', 'm4a', 'ogg', 'flac', 'webm'],
-            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM"
+            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM",
+            key="audio_uploader"
         )
         
         if audio_file:
-            file_size_mb = audio_file.size / (1024 * 1024)
+            file_size_bytes = audio_file.size
+            file_size_kb = file_size_bytes / 1024
+            file_size_mb = file_size_bytes / (1024 * 1024)
+            
+            # Display file size in appropriate unit
+            if file_size_mb >= 1:
+                size_display = f"{file_size_mb:.2f} MB"
+            else:
+                size_display = f"{file_size_kb:.2f} KB"
+            
             st.markdown(f"""
                 <div class='success-card'>
                     <strong>✅ File Uploaded Successfully</strong><br/>
                     📁 {audio_file.name}<br/>
-                    💾 Size: {file_size_mb:.2f} MB
+                    💾 Size: {size_display} ({file_size_bytes:,} bytes)
                 </div>
             """, unsafe_allow_html=True)
             
+            # Reset file pointer before reading
+            audio_file.seek(0)
             st.audio(audio_file)
             
             st.markdown("<br/>", unsafe_allow_html=True)
@@ -592,39 +611,150 @@ with tab1:
                     st.error("⚠️ Please enter your AssemblyAI API key in the sidebar first!", icon="⚠️")
                 else:
                     with st.spinner("🎯 Transcribing audio... Please wait..."):
+                        tmp_file_path = None
                         try:
-                            # Set AssemblyAI API key
-                            aai.settings.api_key = assemblyai_api_key
+                            # Reset file pointer to beginning before reading
+                            audio_file.seek(0)
                             
-                            # Save audio file temporarily
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(audio_file.name)[1]) as tmp_file:
-                                tmp_file.write(audio_file.getvalue())
+                            # Read audio file data
+                            audio_data = audio_file.read()
+                            file_size = len(audio_data)
+                            
+                            # Display file size in appropriate unit
+                            if file_size >= 1024 * 1024:
+                                size_str = f"{file_size / (1024*1024):.2f} MB"
+                            elif file_size >= 1024:
+                                size_str = f"{file_size / 1024:.2f} KB"
+                            else:
+                                size_str = f"{file_size} bytes"
+                            
+                            st.info(f"📊 Processing file: {size_str} ({file_size:,} bytes)")
+                            
+                            if file_size == 0:
+                                st.error("❌ Audio file is empty (0 bytes). Please upload a valid audio file with actual content.", icon="❌")
+                                st.warning("⚠️ Try re-uploading your audio file or use a different file.")
+                                raise ValueError("Audio file is empty")
+                            
+                            if file_size < 1024:
+                                st.error(f"❌ File is too small ({file_size} bytes). This is likely not a valid audio file.", icon="❌")
+                                st.warning("⚠️ Please upload a proper audio file (should be at least several KB in size)")
+                                raise ValueError(f"File too small: {file_size} bytes")
+                            
+                            # Set AssemblyAI API key
+                            aai.settings.api_key = assemblyai_api_key.strip()
+                            
+                            # Save audio file temporarily with proper extension
+                            file_extension = os.path.splitext(audio_file.name)[1].lower()
+                            if not file_extension:
+                                file_extension = '.wav'
+                            
+                            # Ensure extension is valid
+                            valid_extensions = ['.mp3', '.wav', '.m4a', '.ogg', '.flac', '.webm']
+                            if file_extension not in valid_extensions:
+                                st.warning(f"⚠️ Unusual file extension: {file_extension}. Proceeding anyway...")
+                            
+                            # Create temp file and write audio data
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension, mode='wb') as tmp_file:
+                                tmp_file.write(audio_data)
+                                tmp_file.flush()
+                                os.fsync(tmp_file.fileno())  # Force write to disk
                                 tmp_file_path = tmp_file.name
                             
-                            # Configure transcription with universal speech model
-                            config = aai.TranscriptionConfig(speech_model=aai.SpeechModel.universal)
+                            # Verify file was written correctly
+                            if not os.path.exists(tmp_file_path):
+                                raise ValueError("Failed to save audio file temporarily.")
                             
-                            # Transcribe audio file
-                            transcript = aai.Transcriber(config=config).transcribe(tmp_file_path)
+                            saved_size = os.path.getsize(tmp_file_path)
+                            if saved_size == 0:
+                                raise ValueError("Saved file is empty (0 bytes).")
                             
+                            if saved_size != file_size:
+                                st.warning(f"⚠️ File size mismatch: Original {file_size} bytes, Saved {saved_size} bytes")
+                            
+                            # Display saved file size
+                            if saved_size >= 1024 * 1024:
+                                saved_str = f"{saved_size / (1024*1024):.2f} MB"
+                            elif saved_size >= 1024:
+                                saved_str = f"{saved_size / 1024:.2f} KB"
+                            else:
+                                saved_str = f"{saved_size} bytes"
+                            
+                            st.info(f"✅ Audio file saved: {saved_str} ({saved_size:,} bytes)")
+                            
+                            # Configure transcription - remove speech_model parameter for simpler config
+                            config = aai.TranscriptionConfig()
+                            
+                            # Create transcriber and transcribe
+                            st.info("🚀 Starting transcription with AssemblyAI...")
+                            transcriber = aai.Transcriber(config=config)
+                            transcript = transcriber.transcribe(tmp_file_path)
+                            
+                            # The transcribe method is blocking and waits for completion
                             # Check for errors
                             if transcript.status == "error":
                                 raise RuntimeError(f"Transcription failed: {transcript.error}")
                             
-                            # Clean up temp file
-                            os.unlink(tmp_file_path)
+                            # Get the transcript text
+                            transcript_text = transcript.text
+                            
+                            # Validate transcript is not empty
+                            if not transcript_text or len(transcript_text.strip()) == 0:
+                                raise ValueError("Transcription returned empty text. The audio might be silent or unclear.")
                             
                             # Save transcript to session state
-                            st.session_state.transcript = transcript.text
+                            st.session_state.transcript = transcript_text
                             
+                            # Show preview of transcript
+                            preview_length = min(200, len(transcript_text))
                             st.success("✅ Transcription completed successfully!", icon="✅")
+                            st.info(f"📝 Transcript preview: {transcript_text[:preview_length]}...", icon="📄")
+                            st.info(f"📊 **Next Step:** Click on the '📊 Results' tab above to generate meeting minutes!", icon="👉")
                             st.balloons()
-                            st.rerun()
                             
                         except Exception as e:
-                            st.error(f"❌ Transcription failed: {str(e)}", icon="❌")
-                            if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
-                                os.unlink(tmp_file_path)
+                            error_msg = str(e)
+                            st.error(f"❌ Error: {error_msg}", icon="❌")
+                            
+                            # Get file size safely
+                            try:
+                                current_file_size = len(audio_file.read()) if audio_file else 0
+                            except:
+                                current_file_size = 0
+                            
+                            # Provide specific guidance based on error
+                            if "Invalid API key" in error_msg or "401" in error_msg or "Unauthorized" in error_msg:
+                                st.warning("🔑 Your API key appears to be invalid. Please verify:", icon="⚠️")
+                                st.markdown("- Check for extra spaces before/after the key")
+                                st.markdown("- Ensure you copied the complete key from AssemblyAI dashboard")
+                                st.markdown("- Try generating a new API key")
+                            elif "empty" in error_msg.lower() or "too small" in error_msg.lower() or current_file_size < 1024:
+                                st.warning("📁 Audio file issue:", icon="⚠️")
+                                st.markdown(f"- Current file size: {current_file_size} bytes")
+                                st.markdown("- The file appears to be corrupted or empty")
+                                st.markdown("- Try re-uploading your audio file")
+                                st.markdown("- Try a different audio file")
+                                st.markdown("- Make sure you're uploading an actual audio recording, not a text file")
+                            elif "Upload failed" in error_msg:
+                                st.warning("🌐 Upload issue detected:", icon="⚠️")
+                                st.markdown(f"- File size being uploaded: {current_file_size} bytes")
+                                st.markdown("- If file shows as 0 bytes, the file is corrupted or empty")
+                                st.markdown("- Try removing and re-uploading the file")
+                                st.markdown("- Check if the file plays properly on your computer")
+                                st.markdown("- Try converting the audio to a different format (e.g., MP3)")
+                            else:
+                                st.info("💡 Troubleshooting tips:", icon="💡")
+                                st.markdown("- Verify your API key is correct")
+                                st.markdown("- Check your internet connection")
+                                st.markdown("- Make sure the audio file is not corrupted")
+                                st.markdown("- Try a different audio file")
+                        
+                        finally:
+                            # Clean up temp file
+                            if tmp_file_path and os.path.exists(tmp_file_path):
+                                try:
+                                    os.unlink(tmp_file_path)
+                                except:
+                                    pass
     
     with col2:
         st.markdown("""
@@ -671,6 +801,7 @@ with tab2:
             if transcript_input.strip():
                 st.session_state.transcript = transcript_input
                 st.success("✅ Transcript saved!", icon="✅")
+                st.info("📊 **Next:** Go to the '📊 Results' tab to generate meeting minutes!", icon="👉")
             else:
                 st.warning("⚠️ Please enter some text first", icon="⚠️")
         
@@ -699,11 +830,26 @@ Lisa: Will do.
 
 John: Perfect. To summarize: Sarah is leading push notifications, Mike is assessing infrastructure, and Lisa is preparing the dark mode business case. Let's reconvene next Tuesday. Thanks everyone!"""
             st.success("✅ Demo transcript loaded!", icon="✅")
-            st.rerun()
+            st.info("📊 **Next:** Go to the '📊 Results' tab to generate meeting minutes!", icon="👉")
 
 # TAB 3: Results
 with tab3:
-    if st.session_state.transcript:
+    # Debug info (remove after testing)
+    transcript_length = len(st.session_state.transcript) if st.session_state.transcript else 0
+    
+    if st.session_state.transcript and transcript_length > 0:
+        
+        # Show helpful message if minutes haven't been generated yet
+        if not st.session_state.minutes:
+            st.markdown(f"""
+                <div class='info-card' style='text-align: center; padding: 2rem; font-size: 1.1rem;'>
+                    <strong>🎉 Transcript Ready!</strong><br/><br/>
+                    Your transcript has been saved ({transcript_length:,} characters).<br/><br/>
+                    Click the button below to generate AI-powered meeting minutes using Google Gemini.<br/>
+                    The AI will extract key points, action items, decisions, and create a professional summary.
+                </div>
+            """, unsafe_allow_html=True)
+            st.markdown("<br/>", unsafe_allow_html=True)
         
         with st.expander("📄 View Original Transcript", expanded=False):
             st.text_area("Transcript Content", st.session_state.transcript, height=300, disabled=True, label_visibility="collapsed")
