@@ -5,8 +5,12 @@ from datetime import datetime
 import json
 import tempfile
 import os
+import time
+import traceback
 from dotenv import load_dotenv
+
 load_dotenv()
+
 # Page config MUST be first Streamlit command
 st.set_page_config(
     page_title="Smart Meeting Minutes",
@@ -14,168 +18,404 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-# Professional CSS styling
+
+# Modern Premium CSS Design System
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
     
+    /* Global Styles */
     * {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
-    .main {
-        padding: 1rem 2rem;
+    
+    html, body {
+        background: #f5f7fa;
+        color: #1a202c;
     }
+    
     .stApp {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     
-    .main > div {
-        background: white;
-        padding: 2rem;
-        border-radius: 20px;
-        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    .main {
+        padding: 0 !important;
     }
     
+    .main > div {
+        background: transparent;
+        padding: 2rem 3rem !important;
+    }
+    
+    /* Smooth Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.8;
+        }
+    }
+    
+    /* Header Styles */
     h1 {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
-        font-weight: 800;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 3.5rem !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
         text-align: center;
-        margin-bottom: 0;
-        letter-spacing: -2px;
+        margin: 0 0 0.5rem 0 !important;
+        letter-spacing: -0.5px !important;
+        animation: fadeInUp 0.6s ease-out !important;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.1);
     }
     
     .subtitle {
         text-align: center;
-        color: #64748b;
-        font-size: 1.25rem;
-        margin-bottom: 3rem;
-        font-weight: 500;
+        color: rgba(255, 255, 255, 0.95) !important;
+        font-size: 1.25rem !important;
+        font-weight: 400 !important;
+        margin-bottom: 3rem !important;
+        animation: fadeInUp 0.8s ease-out !important;
+        letter-spacing: 0.3px !important;
     }
     
+    h2 {
+        color: #2d3748 !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 1.875rem !important;
+        font-weight: 600 !important;
+        margin: 2rem 0 1rem 0 !important;
+    }
+    
+    h3 {
+        color: #4a5568 !important;
+        font-weight: 600 !important;
+        font-size: 1.25rem !important;
+        margin: 1.5rem 0 0.75rem 0 !important;
+    }
+    
+    p, label, span {
+        color: #4a5568 !important;
+        line-height: 1.6 !important;
+    }
+    
+    /* Card System */
+    .modern-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: fadeInUp 0.5s ease-out;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    
+    .modern-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    /* Button Styles */
     .stButton > button {
         width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 0.875rem 2rem;
-        font-size: 1rem;
-        font-weight: 600;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        letter-spacing: 0.5px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border: none !important;
+        padding: 0.875rem 2rem !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+        border-radius: 12px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.4) !important;
+        letter-spacing: 0.3px !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
     }
     
+    .stButton > button:active {
+        transform: translateY(0) !important;
+    }
+    
+    /* Alert Cards */
     .success-card {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        border-left: 5px solid #28a745;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 10px rgba(40, 167, 69, 0.1);
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+        border-left: 4px solid #28a745 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #155724 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15) !important;
     }
     
     .info-card {
-        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-        border-left: 5px solid #2196f3;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 10px rgba(33, 150, 243, 0.1);
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%) !important;
+        border-left: 4px solid #17a2b8 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #0c5460 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.15) !important;
     }
     
     .warning-card {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-        border-left: 5px solid #ffc107;
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 10px rgba(255, 193, 7, 0.1);
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+        border-left: 4px solid #ffc107 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #856404 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15) !important;
     }
     
+    .error-card {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+        border-left: 4px solid #dc3545 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #721c24 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15) !important;
+    }
+    
+    /* Metric Cards */
     .metric-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        border: 2px solid #f1f5f9;
-        transition: all 0.3s ease;
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: all 0.3s ease !important;
+        text-align: center;
     }
     
     .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.3) !important;
+        border-color: #667eea !important;
     }
     
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    
+    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: #f8fafc;
-        padding: 0.5rem;
-        border-radius: 12px;
+        gap: 12px;
+        background: white;
+        padding: 0.75rem;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        color: #64748b;
+        border-radius: 10px !important;
+        padding: 0.875rem 1.75rem;
+        font-weight: 600 !important;
+        color: #718096 !important;
+        transition: all 0.3s ease !important;
+        border: none !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
     }
     
+    /* Input Fields */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        color: #2d3748 !important;
+        transition: all 0.3s ease !important;
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    }
+    
+    /* File Uploader */
     .uploadedFile {
         border-radius: 12px;
-        border: 2px dashed #667eea;
-        padding: 1rem;
-    }
-    
-    .stTextArea textarea {
-        border-radius: 12px;
-        border: 2px solid #e2e8f0;
-        font-family: 'Monaco', monospace;
-    }
-    
-    div[data-testid="stExpander"] {
-        border-radius: 12px;
-        border: 2px solid #e2e8f0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    }
-    
-    .sidebar .sidebar-content {
-        background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    section[data-testid="stSidebar"] > div {
-        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-        padding: 2rem 1rem;
-    }
-    
-    .api-link {
-        display: inline-block;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        text-decoration: none;
-        font-weight: 600;
-        margin: 0.5rem 0;
+        border: 2px dashed #cbd5e0 !important;
+        padding: 1.5rem;
+        background: #f7fafc !important;
         transition: all 0.3s ease;
     }
     
+    .uploadedFile:hover {
+        border-color: #667eea !important;
+        background: #edf2f7 !important;
+    }
+    
+    /* Expander */
+    div[data-testid="stExpander"] {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0 !important;
+        background: white !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] > div {
+        background: white;
+        padding: 2rem 1.5rem;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    section[data-testid="stSidebar"] h3 {
+        color: #2d3748 !important;
+        font-size: 1.125rem !important;
+        font-weight: 700 !important;
+        margin: 1.5rem 0 1rem 0 !important;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    section[data-testid="stSidebar"] h4 {
+        color: #4a5568 !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        margin: 1.25rem 0 0.5rem 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] li {
+        color: #718096 !important;
+        font-size: 0.875rem !important;
+        line-height: 1.6 !important;
+    }
+    
+    section[data-testid="stSidebar"] hr {
+        margin: 1.5rem 0;
+        border: none;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    /* Links */
+    .api-link {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
     .api-link:hover {
-        transform: scale(1.05);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    }
+    
+    a {
+        color: #667eea !important;
+        text-decoration: none !important;
+        font-weight: 500;
+        transition: color 0.3s ease !important;
+    }
+    
+    a:hover {
+        color: #764ba2 !important;
+    }
+    
+    /* Banner */
+    .banner {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #667eea;
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .banner h2 {
+        margin: 0 0 0.5rem 0 !important;
+        color: #2d3748 !important;
+    }
+    
+    .banner p {
+        margin: 0;
+        color: #718096 !important;
+        font-size: 1rem;
+    }
+    
+    /* Loading Animation */
+    .stSpinner > div {
+        border-color: #667eea !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -187,6 +427,26 @@ if 'minutes' not in st.session_state:
     st.session_state.minutes = None
 if 'processing' not in st.session_state:
     st.session_state.processing = False
+
+# Utility function for exponential backoff
+def exponential_backoff(fn, max_retries=4, initial_delay=1.0):
+    """Retry function with exponential backoff for rate limiting"""
+    delay = initial_delay
+    for attempt in range(max_retries):
+        try:
+            return fn()
+        except Exception as e:
+            msg = str(e).lower()
+            if '429' in msg or 'quota' in msg or 'rate limit' in msg or 'exceeded' in msg:
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                else:
+                    raise
+            else:
+                raise
+
 # Header
 st.markdown("<h1>📝 Smart Meeting Minutes</h1>", unsafe_allow_html=True)
 st.markdown("<p class='subtitle'>Transform your meeting recordings into actionable insights with AI</p>", unsafe_allow_html=True)
@@ -194,126 +454,123 @@ st.markdown("<p class='subtitle'>Transform your meeting recordings into actionab
 # Sidebar Configuration
 with st.sidebar:
     st.markdown("### 🔐 API Configuration")
+    st.markdown("Configure your API keys to unlock AI-powered features")
     
+    st.markdown("---")
+    
+    # OpenAI Section
     st.markdown("#### 🔑 OpenAI API Key")
+    st.caption("Required for audio transcription")
     openai_api_key = st.text_input(
-        "Enter OpenAI Key",
+        "OpenAI API Key",
         type="password",
-        help="For Whisper audio transcription",
         placeholder="sk-...",
-        value=os.getenv("OPENAI_API_KEY", "")
+        value=os.getenv("OPENAI_API_KEY", ""),
+        key="openai_key",
+        label_visibility="collapsed"
     )
+    
     if openai_api_key:
-        st.success("✅ OpenAI key configured")
+        st.success("✅ OpenAI configured")
     else:
+        st.warning("⚠️ OpenAI key required")
         st.markdown("""
-        <div style='background: #fee; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;'>
-            <strong>⚠️ Required for audio transcription</strong><br/>
-            <a href='https://platform.openai.com/api-keys' target='_blank' class='api-link'>
-                🔗 Get OpenAI API Key
-            </a>
-        </div>
+        <a href='https://platform.openai.com/api-keys' target='_blank' class='api-link'>
+            Get API Key
+        </a>
         """, unsafe_allow_html=True)
-    #hello
+    
+    st.markdown("<br/>", unsafe_allow_html=True)
+    
+    # Gemini Section
     st.markdown("#### 🤖 Google Gemini API Key")
+    st.caption("Required for generating meeting minutes")
     gemini_api_key = st.text_input(
-        "Enter Gemini Key",
+        "Gemini API Key",
         type="password",
-        help="For generating meeting minutes",
         placeholder="AIza...",
-        value=os.getenv("GEMINI_API_KEY", "")
+        value=os.getenv("GEMINI_API_KEY", ""),
+        key="gemini_key",
+        label_visibility="collapsed"
     )
     
     if gemini_api_key:
-        st.success("✅ Gemini key configured")
+        st.success("✅ Gemini configured")
+        
+        if st.button("🧪 Test Connection", use_container_width=True):
+            with st.spinner("Testing API..."):
+                try:
+                    genai.configure(api_key=gemini_api_key)
+                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                    response = model.generate_content("Say 'OK'")
+                    
+                    if response.text:
+                        st.success(f"✅ Connected successfully!")
+                    else:
+                        raise Exception("No response")
+                except Exception as e:
+                    error_msg = str(e)
+                    if '429' in error_msg or 'quota' in error_msg.lower():
+                        st.error("❌ Quota exceeded. Try again later or check your billing.")
+                    else:
+                        st.error(f"❌ Connection failed: {error_msg[:50]}")
     else:
+        st.warning("⚠️ Gemini key required")
         st.markdown("""
-        <div style='background: #fee; padding: 1rem; border-radius: 8px; border-left: 4px solid #f44336;'>
-            <strong>⚠️ Required for minutes generation</strong><br/>
-            <a href='https://aistudio.google.com/app/apikey' target='_blank' class='api-link'>
-                🔗 Get Gemini API Key
-            </a>
-        </div>
+        <a href='https://aistudio.google.com/app/apikey' target='_blank' class='api-link'>
+            Get API Key
+        </a>
         """, unsafe_allow_html=True)
     
-    if gemini_api_key and st.button("🧪 Test Gemini API", use_container_width=True):
-        with st.spinner("Testing API..."):
-            try:
-                genai.configure(api_key=gemini_api_key)
-                
-                # Force the model directly
-                working_model_name = 'gemini-2.5-flash'
-                model = genai.GenerativeModel(working_model_name)
-                response = model.generate_content("Say 'Test successful'")
-                
-                if response.text:
-                    st.success(f"✅ API Working! Using: {working_model_name}")
-                else:
-                    raise Exception("No response from model")
-                    
-            except Exception as e:
-                st.error(f"❌ API Test Failed: {str(e)}")
-                st.info("Check your API key or create a new one at: https://aistudio.google.com/app/apikey")
-    
     st.markdown("---")
     
-    st.markdown("### 📚 Quick Guide")
+    # Quick Guide
+    st.markdown("### 📚 How It Works")
     st.markdown("""
-    **Step 1:** Get your API keys
-    - OpenAI: For transcription
-    - Gemini: For analysis
-    
-    **Step 2:** Upload audio or paste text
-    
-    **Step 3:** Generate minutes
-    
-    **Step 4:** Download results
+    1. **Configure** your API keys above
+    2. **Upload** audio or paste transcript
+    3. **Generate** AI-powered minutes
+    4. **Download** in multiple formats
     """)
     
     st.markdown("---")
     
-    st.markdown("### ✨ Features")
+    # Features
+    st.markdown("### ✨ Key Features")
     st.markdown("""
-    - 🎤 Audio transcription (Whisper)
-    - 🤖 AI-powered analysis
-    - ✅ Action items extraction
+    - 🎤 Audio transcription
+    - 🤖 AI analysis
+    - ✅ Action items
     - 👥 Participant tracking
-    - 📥 Multiple export formats
-    - 🎯 Decision highlights
+    - 📥 Export options
     """)
     
     st.markdown("---")
     
-    st.markdown("### 💰 Pricing Info")
-    st.markdown("""
-    **Gemini API (FREE Tier):**
-    - ✅ 15 requests/min (FREE)
-    - ✅ 1,500 requests/day (FREE)
-    - ✅ 1 million tokens/day (FREE)
-    
-    **OpenAI Whisper:**
-    - 💵 $0.006 per minute of audio
-    - Example: 10 min meeting = $0.06
-    
-    **Total Cost per Meeting:**
-    - ~$0.06 for 10-minute audio
-    - Gemini analysis: FREE! ✨
-    """)
+    # Pricing
+    st.markdown("### 💰 Pricing")
+    st.markdown("**OpenAI:** $0.006/min")
+    st.markdown("**Gemini:** FREE (1M tokens/day)")
 
 # Main Tabs
 tab1, tab2, tab3 = st.tabs(["🎤 Upload Audio", "✍️ Paste Transcript", "📊 Results"])
 
 # TAB 1: Upload Audio
 with tab1:
-    st.markdown("### 🎤 Upload Meeting Recording")
+    st.markdown("""
+        <div class='banner'>
+            <h2>🎤 Upload Meeting Recording</h2>
+            <p>Upload your audio file and let AI transcribe it automatically using OpenAI Whisper</p>
+        </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([2, 1])
     
     with col1:
         audio_file = st.file_uploader(
-            "Drop your audio file here",
+            "Choose an audio file",
             type=['mp3', 'wav', 'm4a', 'ogg', 'flac', 'webm'],
-            help="Supported: MP3, WAV, M4A, OGG, FLAC, WebM"
+            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM"
         )
         
         if audio_file:
@@ -322,8 +579,7 @@ with tab1:
                 <div class='success-card'>
                     <strong>✅ File Uploaded Successfully</strong><br/>
                     📁 {audio_file.name}<br/>
-                    💾 Size: {file_size_mb:.2f} MB<br/>
-                    🎵 Format: {audio_file.type}
+                    💾 Size: {file_size_mb:.2f} MB
                 </div>
             """, unsafe_allow_html=True)
             
@@ -331,21 +587,18 @@ with tab1:
             
             st.markdown("<br/>", unsafe_allow_html=True)
             
-            if st.button("🚀 Transcribe Audio with AI", key="transcribe_btn", use_container_width=True):
+            if st.button("🚀 Transcribe Audio", key="transcribe_btn", use_container_width=True):
                 if not openai_api_key:
-                    st.error("⚠️ Please enter your OpenAI API key in the sidebar first!")
+                    st.error("⚠️ Please enter your OpenAI API key in the sidebar first!", icon="⚠️")
                 else:
-                    with st.spinner("🎯 Transcribing audio with Whisper AI... Please wait..."):
+                    with st.spinner("🎯 Transcribing audio... Please wait..."):
                         try:
-                            # Initialize OpenAI
                             client = OpenAI(api_key=openai_api_key)
                             
-                            # Create temp file
                             with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(audio_file.name)[1]) as tmp_file:
                                 tmp_file.write(audio_file.getvalue())
                                 tmp_file_path = tmp_file.name
                             
-                            # Transcribe
                             with open(tmp_file_path, "rb") as audio_data:
                                 transcript_response = client.audio.transcriptions.create(
                                     model="whisper-1",
@@ -353,25 +606,22 @@ with tab1:
                                     response_format="text"
                                 )
                             
-                            # Cleanup
                             os.unlink(tmp_file_path)
-                            
-                            # Store transcript
                             st.session_state.transcript = transcript_response
                             
-                            st.success("✅ Transcription completed successfully!")
+                            st.success("✅ Transcription completed successfully!", icon="✅")
                             st.balloons()
                             st.rerun()
                             
                         except Exception as e:
-                            st.error(f"❌ Transcription failed: {str(e)}")
+                            st.error(f"❌ Transcription failed: {str(e)}", icon="❌")
                             if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
                                 os.unlink(tmp_file_path)
     
     with col2:
         st.markdown("""
             <div class='info-card'>
-                <strong>💡 Tips for Best Results</strong><br/><br/>
+                <strong>💡 Best Practices</strong><br/><br/>
                 ✓ Clear audio quality<br/>
                 ✓ Minimal background noise<br/>
                 ✓ Max file size: 25 MB<br/>
@@ -383,33 +633,38 @@ with tab1:
             est_time = (file_size_mb * 0.3)
             st.markdown(f"""
                 <div class='warning-card'>
-                    <strong>⏱️ Processing Time</strong><br/>
-                    Estimated: ~{est_time:.1f} min
+                    <strong>⏱️ Estimated Time</strong><br/>
+                    Processing: ~{est_time:.1f} min
                 </div>
             """, unsafe_allow_html=True)
 
 # TAB 2: Paste Transcript
 with tab2:
-    st.markdown("### ✍️ Manual Transcript Input")
+    st.markdown("""
+        <div class='banner'>
+            <h2>✍️ Manual Transcript Input</h2>
+            <p>Already have a transcript? Paste it here and generate AI-powered meeting minutes</p>
+        </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
         transcript_input = st.text_area(
-            "Paste your meeting transcript here:",
+            "Paste your meeting transcript",
             value=st.session_state.transcript,
-            height=450,
+            height=400,
             placeholder="Enter or paste your meeting transcript here...\n\nExample:\nJohn: Welcome everyone to today's meeting.\nSarah: Thanks John, let's start with the agenda...",
-            help="You can paste an existing transcript if you already have one"
+            help="Paste your existing transcript to skip audio transcription"
         )
     
     with col2:
         if st.button("💾 Save Transcript", key="save_transcript", use_container_width=True):
             if transcript_input.strip():
                 st.session_state.transcript = transcript_input
-                st.success("✅ Transcript saved!")
+                st.success("✅ Transcript saved!", icon="✅")
             else:
-                st.warning("⚠️ Please enter some text first")
+                st.warning("⚠️ Please enter some text first", icon="⚠️")
         
         st.markdown("<br/>", unsafe_allow_html=True)
         
@@ -435,100 +690,28 @@ John: Let's evaluate that. Lisa, can you compile the customer feedback and busin
 Lisa: Will do.
 
 John: Perfect. To summarize: Sarah is leading push notifications, Mike is assessing infrastructure, and Lisa is preparing the dark mode business case. Let's reconvene next Tuesday. Thanks everyone!"""
-            st.success("✅ Demo transcript loaded!")
+            st.success("✅ Demo transcript loaded!", icon="✅")
             st.rerun()
 
 # TAB 3: Results
 with tab3:
     if st.session_state.transcript:
         
-        # Show transcript preview
         with st.expander("📄 View Original Transcript", expanded=False):
-            st.text_area("Transcript Content", st.session_state.transcript, height=300, disabled=True)
+            st.text_area("Transcript Content", st.session_state.transcript, height=300, disabled=True, label_visibility="collapsed")
         
         st.markdown("<br/>", unsafe_allow_html=True)
         
-        # Generate button
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Generate Meeting Minutes with AI", key="generate_btn", use_container_width=True):
+            if st.button("🚀 Generate Meeting Minutes", key="generate_btn", use_container_width=True):
                 if not gemini_api_key:
-                    st.error("⚠️ Please enter your Gemini API key in the sidebar first!")
+                    st.error("⚠️ Please enter your Gemini API key in the sidebar first!", icon="⚠️")
                 else:
-                    with st.spinner("🤖 Analyzing transcript and generating comprehensive meeting minutes..."):
+                    with st.spinner("🤖 Generating comprehensive meeting minutes..."):
                         try:
-                            # Configure Gemini with correct API version
                             genai.configure(api_key=gemini_api_key)
                             
-                            # List available models to debug
-                            try:
-                                available_models = [m.name for m in genai.list_models()]
-                                st.info(f"🔍 Available models: {', '.join(available_models[:3])}")
-                            except:
-                                pass
-                            
-                            # Try multiple model names in order of preference
-                            # Prioritizing the latest stable models
-                            model_names = [
-                                'gemini-2.5-flash',
-                                'gemini-1.5-flash',
-                                'models/gemini-2.5-flash',
-                                'models/gemini-1.5-flash',
-                                'models/gemini-1.5-pro-latest',
-                                'models/gemini-2.5-pro'
-                            ]
-                            
-                            model = None
-                            working_model_name = None
-                            
-                            for model_name in model_names:
-                                try:
-                                    model = genai.GenerativeModel(model_name)
-                                    # Test with a simple prompt
-                                    test_response = model.generate_content("Say 'OK'")
-                                    if test_response.text:
-                                        working_model_name = model_name
-                                        st.success(f"✅ Using model: {model_name}")
-                                        break
-                                except:
-                                    continue
-                            
-                            # Temporary Debug: Force to use the most common model
-                            working_model_name = 'gemini-2.5-flash'
-                            model = genai.GenerativeModel(working_model_name)
-                            st.success(f"✅ Using forced model: {working_model_name}")
-                            
-                            # Test the forced model first
-                            try:
-                                test_response = model.generate_content("Say 'OK'")
-                                if not test_response.text:
-                                    raise Exception("Model test failed")
-                            except Exception as test_error:
-                                st.error(f"❌ Forced model failed: {str(test_error)}")
-                                st.info("💡 Try fallback models...")
-                                
-                                # Fallback to model list if forced model fails
-                                model_names = [
-                                    'gemini-1.5-flash',
-                                    'models/gemini-2.5-flash',
-                                    'models/gemini-1.5-flash'
-                                ]
-                                
-                                for model_name in model_names:
-                                    try:
-                                        model = genai.GenerativeModel(model_name)
-                                        test_response = model.generate_content("Say 'OK'")
-                                        if test_response.text:
-                                            working_model_name = model_name
-                                            st.success(f"✅ Using fallback model: {model_name}")
-                                            break
-                                    except:
-                                        continue
-                                
-                                if not working_model_name or working_model_name == 'gemini-2.5-flash':
-                                    raise Exception("No working model found")
-                            
-                            # Prompt
                             prompt = f"""Analyze this meeting transcript and generate comprehensive meeting minutes in JSON format.
 
 Transcript:
@@ -551,84 +734,139 @@ Return ONLY valid JSON in this exact structure:
     ],
     "next_meeting": "Next meeting info or null"
 }}"""
-
-                            response = model.generate_content(prompt)
                             
-                            # Parse JSON
-                            response_text = response.text.strip()
-                            response_text = response_text.replace("```json", "").replace("```", "").strip()
+                            model_names = [
+                                'gemini-2.0-flash-exp',
+                                'gemini-1.5-flash',
+                                'gemini-1.5-pro',
+                                'models/gemini-2.0-flash-exp',
+                                'models/gemini-1.5-flash'
+                            ]
                             
-                            st.session_state.minutes = json.loads(response_text)
-                            st.success("✅ Meeting minutes generated successfully!")
+                            minutes_json = None
+                            working_model_name = None
+                            
+                            for model_name in model_names:
+                                try:
+                                    def try_model():
+                                        model = genai.GenerativeModel(model_name)
+                                        resp = model.generate_content(prompt)
+                                        txt = getattr(resp, 'text', None)
+                                        if not txt:
+                                            raise Exception("Empty response")
+                                        return txt
+                                    
+                                    response_text = exponential_backoff(try_model, max_retries=3, initial_delay=2.0)
+                                    response_text = response_text.strip().replace("```json", "").replace("```", "").strip()
+                                    minutes_json = json.loads(response_text)
+                                    working_model_name = model_name
+                                    break
+                                    
+                                except Exception as model_err:
+                                    error_msg = str(model_err).lower()
+                                    if '429' in error_msg or 'quota' in error_msg or 'exceeded' in error_msg:
+                                        st.warning(f"⚠️ {model_name}: Quota exceeded, trying next model...", icon="⚠️")
+                                        continue
+                                    else:
+                                        continue
+                            
+                            if not minutes_json:
+                                st.markdown("""
+                                    <div class='error-card'>
+                                        <strong>❌ All Gemini models are currently unavailable</strong><br/><br/>
+                                        <strong>Possible reasons:</strong><br/>
+                                        • API quota exceeded (429 error)<br/>
+                                        • Rate limit reached<br/>
+                                        • Billing issue<br/><br/>
+                                        <strong>Solutions:</strong><br/>
+                                        1. Wait a few minutes and try again<br/>
+                                        2. Check your quota at <a href='https://aistudio.google.com' target='_blank'>Google AI Studio</a><br/>
+                                        3. Verify billing is enabled<br/>
+                                        4. Try using a different API key
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                st.stop()
+                            
+                            st.session_state.minutes = minutes_json
+                            st.success(f"✅ Minutes generated using {working_model_name}!", icon="✅")
                             st.balloons()
                             st.rerun()
                             
                         except json.JSONDecodeError as e:
-                            st.error(f"❌ Failed to parse response as JSON: {str(e)}")
-                            st.info("💡 The AI returned invalid JSON. Try again or use a different transcript.")
+                            st.error(f"❌ Invalid JSON response: {str(e)}", icon="❌")
                         except Exception as e:
-                            st.error(f"❌ Generation failed: {str(e)}")
-                            st.info("💡 Troubleshooting steps:")
-                            st.markdown("""
-                            1. Verify your API key is correct
-                            2. Check if Gemini API is enabled at: https://console.cloud.google.com/apis/library/generativelanguage.googleapis.com
-                            3. Try creating a new API key at: https://aistudio.google.com/app/apikey
-                            4. Make sure your transcript is not empty
-                            """)
+                            error_msg = str(e)
+                            if '429' in error_msg or 'quota' in error_msg.lower():
+                                st.markdown("""
+                                    <div class='error-card'>
+                                        <strong>❌ API Quota Exceeded</strong><br/><br/>
+                                        Your Gemini API quota has been exceeded. Please:<br/>
+                                        1. Wait a few minutes and try again<br/>
+                                        2. Check your quota at <a href='https://aistudio.google.com' target='_blank'>Google AI Studio</a><br/>
+                                        3. Verify your API key is correct<br/>
+                                        4. Ensure billing is enabled if using paid tier
+                                    </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.error(f"❌ Generation failed: {error_msg}", icon="❌")
         
-        # Display Minutes
         if st.session_state.minutes:
             st.markdown("<br/><br/>", unsafe_allow_html=True)
-            st.markdown("## 📋 Generated Meeting Minutes")
-            st.markdown("---")
+            
+            st.markdown("""
+                <div class='banner'>
+                    <h2>📋 Generated Meeting Minutes</h2>
+                    <p>AI-powered analysis of your meeting transcript</p>
+                </div>
+            """, unsafe_allow_html=True)
             
             minutes = st.session_state.minutes
             
             # Metrics Row
             col1, col2, col3, col4 = st.columns(4)
+            
             with col1:
-                st.markdown("""
-                    <div class='metric-card' style='text-align: center;'>
-                        <h3 style='color: #667eea; margin: 0;'>📅</h3>
-                        <p style='margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #64748b;'>Date</p>
-                        <p style='margin: 0; font-weight: 600; color: #1e293b;'>{}</p>
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>📅</div>
+                        <div class='metric-label'>Date</div>
+                        <div class='metric-value' style='font-size: 1rem; color: #4a5568;'>{minutes.get('date', 'N/A')}</div>
                     </div>
-                """.format(minutes.get('date', 'N/A')), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             with col2:
-                st.markdown("""
-                    <div class='metric-card' style='text-align: center;'>
-                        <h3 style='color: #764ba2; margin: 0;'>👥</h3>
-                        <p style='margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #64748b;'>Participants</p>
-                        <p style='margin: 0; font-weight: 600; color: #1e293b;'>{}</p>
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>👥</div>
+                        <div class='metric-label'>Participants</div>
+                        <div class='metric-value'>{len(minutes.get('participants', []))}</div>
                     </div>
-                """.format(len(minutes.get('participants', []))), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             with col3:
-                st.markdown("""
-                    <div class='metric-card' style='text-align: center;'>
-                        <h3 style='color: #667eea; margin: 0;'>✅</h3>
-                        <p style='margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #64748b;'>Action Items</p>
-                        <p style='margin: 0; font-weight: 600; color: #1e293b;'>{}</p>
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>✅</div>
+                        <div class='metric-label'>Action Items</div>
+                        <div class='metric-value'>{len(minutes.get('action_items', []))}</div>
                     </div>
-                """.format(len(minutes.get('action_items', []))), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             with col4:
-                st.markdown("""
-                    <div class='metric-card' style='text-align: center;'>
-                        <h3 style='color: #764ba2; margin: 0;'>🎯</h3>
-                        <p style='margin: 0.5rem 0 0 0; font-size: 0.875rem; color: #64748b;'>Decisions</p>
-                        <p style='margin: 0; font-weight: 600; color: #1e293b;'>{}</p>
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>🎯</div>
+                        <div class='metric-label'>Decisions</div>
+                        <div class='metric-value'>{len(minutes.get('decisions', []))}</div>
                     </div>
-                """.format(len(minutes.get('decisions', []))), unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
             
             st.markdown("<br/>", unsafe_allow_html=True)
             
-            # Two Column Layout
+            # Content Grid
             col1, col2 = st.columns([1, 1])
             
             with col1:
-                # Summary
                 st.markdown("### 📋 Executive Summary")
                 st.markdown(f"""
                     <div class='info-card'>
@@ -636,20 +874,15 @@ Return ONLY valid JSON in this exact structure:
                     </div>
                 """, unsafe_allow_html=True)
                 
-                # Participants
                 st.markdown("### 👥 Participants")
                 for p in minutes.get('participants', []):
                     st.markdown(f"• **{p}**")
                 
-                st.markdown("<br/>", unsafe_allow_html=True)
-                
-                # Key Points
                 st.markdown("### 💡 Key Discussion Points")
                 for i, point in enumerate(minutes.get('key_points', []), 1):
                     st.markdown(f"**{i}.** {point}")
             
             with col2:
-                # Decisions
                 st.markdown("### ✅ Decisions Made")
                 for i, decision in enumerate(minutes.get('decisions', []), 1):
                     st.markdown(f"""
@@ -658,10 +891,9 @@ Return ONLY valid JSON in this exact structure:
                         </div>
                     """, unsafe_allow_html=True)
                 
-                # Next Meeting
                 if minutes.get('next_meeting'):
                     st.markdown("### 📅 Next Meeting")
-                    st.info(minutes.get('next_meeting'))
+                    st.info(minutes.get('next_meeting'), icon="📅")
             
             # Action Items
             st.markdown("---")
@@ -682,7 +914,6 @@ Return ONLY valid JSON in this exact structure:
             
             col1, col2, col3 = st.columns(3)
             
-            # TXT Export
             with col1:
                 minutes_text = f"""MEETING MINUTES
 {'=' * 60}
@@ -722,7 +953,6 @@ NEXT MEETING
                     use_container_width=True
                 )
             
-            # JSON Export
             with col2:
                 st.download_button(
                     label="📊 Download JSON",
@@ -732,7 +962,6 @@ NEXT MEETING
                     use_container_width=True
                 )
             
-            # Markdown Export
             with col3:
                 markdown_text = f"""# {minutes.get('meeting_title', 'Meeting Minutes')}
 
@@ -766,10 +995,10 @@ NEXT MEETING
     
     else:
         st.markdown("""
-            <div class='warning-card' style='text-align: center; padding: 3rem;'>
+            <div class='banner' style='text-align: center; padding: 4rem 2rem;'>
                 <h2>👈 Get Started</h2>
-                <p style='font-size: 1.1rem; margin-top: 1rem;'>
-                    Upload an audio file or paste a transcript to generate meeting minutes
+                <p style='font-size: 1.125rem; margin-top: 1rem;'>
+                    Upload an audio file or paste a transcript to generate AI-powered meeting minutes
                 </p>
             </div>
         """, unsafe_allow_html=True)
@@ -778,155 +1007,12 @@ NEXT MEETING
 st.markdown("<br/><br/>", unsafe_allow_html=True)
 st.markdown("---")
 st.markdown("""
-    <div style='text-align: center; padding: 2rem;'>
-        <p style='color: #64748b; font-size: 1.1rem; margin-bottom: 0.5rem;'>
+    <div style='text-align: center; padding: 2rem; color: white;'>
+        <p style='font-size: 1.1rem; margin-bottom: 0.5rem; color: rgba(255,255,255,0.9);'>
             Built with ❤️ using Streamlit, OpenAI Whisper & Google Gemini
         </p>
-        <p style='color: #94a3b8;'>
+        <p style='color: rgba(255,255,255,0.7);'>
             🚀 Transform meetings into actionable insights in seconds
         </p>
     </div>
 """, unsafe_allow_html=True)
-
-import time
-import traceback
-
-def exponential_backoff(fn, max_retries=4, initial_delay=1.0):
-    delay = initial_delay
-    for attempt in range(max_retries):
-        try:
-            return fn()
-        except Exception as e:
-            msg = str(e).lower()
-            # If rate-limited or quota exceeded, retry with backoff
-            if '429' in msg or 'quota' in msg or 'rate limit' in msg or 'rate-limited' in msg or 'insufficient_quota' in msg:
-                if attempt < max_retries - 1:
-                    time.sleep(delay)
-                    delay *= 2
-                    continue
-                else:
-                    raise
-            else:
-                # not a rate/quota error -> rethrow
-                raise
-
-# The prompt format you want (same JSON structure)
-minutes_prompt_template = f"""Analyze this meeting transcript and generate comprehensive meeting minutes in JSON format.
-
-Transcript:
-{st.session_state.transcript}
-
-Return ONLY valid JSON in this exact structure:
-{{
-    "meeting_title": "Brief descriptive title",
-    "date": "{datetime.now().strftime('%B %d, %Y')}",
-    "participants": ["Name1", "Name2"],
-    "summary": "2-3 sentence executive summary",
-    "key_points": ["Point 1", "Point 2"],
-    "decisions": ["Decision 1", "Decision 2"],
-    "action_items": [
-        {{
-            "task": "Task description",
-            "assignee": "Person name",
-            "deadline": "Deadline or timeframe"
-        }}
-    ],
-    "next_meeting": "Next meeting info or null"
-}}"""
-
-# Attempt Gemini first with retries/backoff
-gemini_success = False
-minutes_json = None
-
-if gemini_api_key:
-    try:
-        genai.configure(api_key=gemini_api_key)
-
-        # Try to get model list and pick candidates (safe defaults)
-        try:
-            candidates = [m.name for m in genai.list_models()]
-        except Exception:
-            # fallback candidate list
-            candidates = [
-                'models/gemini-2.5-flash',
-                'models/gemini-1.5-flash',
-                'gemini-2.5-flash',
-                'gemini-1.5-flash'
-            ]
-
-        # ensure unique ordering and prefer modern models
-        preferred_order = []
-        for name in ['gemini-2.5-flash', 'models/gemini-2.5-flash', 'gemini-1.5-flash', 'models/gemini-1.5-flash']:
-            if name in candidates and name not in preferred_order:
-                preferred_order.append(name)
-        # append any remaining
-        for c in candidates:
-            if c not in preferred_order:
-                preferred_order.append(c)
-
-        # Try models with exponential backoff for rate errors
-        for model_name in preferred_order:
-            def try_model():
-                model = genai.GenerativeModel(model_name)
-                resp = model.generate_content(minutes_prompt_template)
-                # genai returns an object; check text
-                txt = getattr(resp, 'text', None)
-                if not txt:
-                    raise Exception("Empty response from model")
-                return txt
-
-            try:
-                response_text = exponential_backoff(try_model, max_retries=4, initial_delay=1.0)
-                # Clean and parse
-                response_text = response_text.strip().replace("```json", "").replace("```", "").strip()
-                minutes_json = json.loads(response_text)
-                gemini_success = True
-                st.success(f"✅ Generated minutes using Gemini model: {model_name}")
-                break
-            except Exception as model_err:
-                # If a quota error bubbled up, try next model; otherwise log and continue
-                st.warning(f"Model {model_name} failed: {str(model_err)[:200]}")
-                continue
-
-    except Exception as e:
-        st.info("Gemini attempt failed; will try fallback summarizers.")
-        st.debug = getattr(st, "debug", lambda *a, **k: None)
-        st.debug(traceback.format_exc())
-
-# If Gemini failed, fallback to OpenAI Chat (if OpenAI key present)
-if not gemini_success:
-    st.warning("⚠️ Gemini unavailable or rate-limited. Falling back to OpenAI for minutes generation (if OpenAI key provided).")
-    if openai_api_key:
-        try:
-            client = OpenAI(api_key=openai_api_key)
-            # Build chat prompt that instructs the model to return valid JSON only
-            chat_prompt = [
-                {"role": "system", "content": "You are a helpful assistant that MUST return ONLY valid JSON in the exact structure requested."},
-                {"role": "user", "content": minutes_prompt_template}
-            ]
-            # Use gpt-4o or gpt-4 if available in your account; fall back to gpt-3.5-turbo
-            chosen_model = "gpt-4o"  # try this; if not available, use gpt-4 or gpt-3.5-turbo
-            try:
-                chat_resp = client.chat.completions.create(model=chosen_model, messages=chat_prompt, temperature=0.0)
-            except Exception:
-                # fallback
-                chat_resp = client.chat.completions.create(model="gpt-3.5-turbo", messages=chat_prompt, temperature=0.0)
-
-            text_out = chat_resp.choices[0].message["content"]
-            text_out = text_out.strip().replace("```json", "").replace("```", "").strip()
-            minutes_json = json.loads(text_out)
-            st.success("✅ Generated minutes using OpenAI fallback")
-        except json.JSONDecodeError as je:
-            st.error(f"❌ OpenAI returned non-JSON or malformed JSON: {str(je)}")
-            st.info("Try regenerating or edit the transcript to be shorter/cleaner.")
-        except Exception as e:
-            st.error(f"❌ OpenAI fallback failed: {str(e)}")
-    else:
-        st.error("❌ No working summarization API available (Gemini rate-limited and no OpenAI key provided). Please add an OpenAI key or resolve Gemini quota.")
-
-# If minutes_json built, save to session_state and render as before
-if minutes_json:
-    st.session_state.minutes = minutes_json
-    st.success("✅ Meeting minutes generated!")
-    st.balloons()
-    st.rerun()

@@ -5,6 +5,8 @@ from datetime import datetime
 import json
 import tempfile
 import os
+import time
+import traceback
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -14,26 +16,27 @@ st.set_page_config(
     page_title="Smart Meeting Minutes",
     page_icon="📝",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
+# Modern Premium CSS Design System
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
     
+    /* Global Styles */
     * {
-        font-family: 'Inter', sans-serif !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
     html, body {
-        background: #0a0a0a;
-        color: #f5f1ff;
+        background: #f5f7fa;
+        color: #1a202c;
     }
     
     .stApp {
-        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #16213e 100%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     
     .main {
@@ -41,45 +44,15 @@ st.markdown("""
     }
     
     .main > div {
-        padding: 2.5rem !important;
+        background: transparent;
+        padding: 2rem 3rem !important;
     }
     
-    section[data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #16213e 100%);
-    }
-    
-    section[data-testid="stSidebar"] {
-        display: none !important;
-    }
-    
-    /* Premium animation keyframes */
-    @keyframes slideInDown {
-        from {
-            opacity: 0;
-            transform: translateY(-40px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-    
-    @keyframes gradientShift {
-        0% {
-            background-position: 0% 50%;
-        }
-        50% {
-            background-position: 100% 50%;
-        }
-        100% {
-            background-position: 0% 50%;
-        }
-    }
-    
+    /* Smooth Animations */
     @keyframes fadeInUp {
         from {
             opacity: 0;
-            transform: translateY(25px);
+            transform: translateY(20px);
         }
         to {
             opacity: 1;
@@ -87,288 +60,365 @@ st.markdown("""
         }
     }
     
-    @keyframes pulseGlow {
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    @keyframes pulse {
         0%, 100% {
-            text-shadow: 0 0 20px rgba(233, 179, 251, 0.3), 0 0 40px rgba(111, 0, 255, 0.2);
+            opacity: 1;
         }
         50% {
-            text-shadow: 0 0 30px rgba(233, 179, 251, 0.6), 0 0 60px rgba(111, 0, 255, 0.4);
+            opacity: 0.8;
         }
     }
     
-    @keyframes smoothBorder {
-        0% {
-            border-color: rgba(111, 0, 255, 0.3);
-        }
-        50% {
-            border-color: rgba(233, 179, 251, 0.6);
-        }
-        100% {
-            border-color: rgba(111, 0, 255, 0.3);
-        }
-    }
-    
-    /* Main heading - MUCH LARGER and prominent */
+    /* Header Styles */
     h1 {
-        background: linear-gradient(135deg, #8B5CF6, #EC4899, #6F00FF, #8B5CF6);
-        background-size: 300% 300%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        font-family: 'Space Grotesk', sans-serif !important;
-        font-size: 4.2rem !important;
-        font-weight: 900 !important;
+        font-family: 'Poppins', sans-serif !important;
+        font-size: 3.5rem !important;
+        font-weight: 700 !important;
+        color: #ffffff !important;
         text-align: center;
-        margin-bottom: 0.3rem !important;
-        letter-spacing: -1px !important;
-        animation: slideInDown 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), gradientShift 4s ease-in-out infinite !important;
-        line-height: 1.1 !important;
+        margin: 0 0 0.5rem 0 !important;
+        letter-spacing: -0.5px !important;
+        animation: fadeInUp 0.6s ease-out !important;
+        text-shadow: 0 2px 20px rgba(0,0,0,0.1);
     }
     
-    /* Subtitle with enhanced styling */
     .subtitle {
         text-align: center;
-        color: #e9b3fb !important;
-        font-family: 'Poppins', sans-serif !important;
-        font-size: 1.35rem !important;
-        font-weight: 500 !important;
-        margin-bottom: 2.5rem !important;
-        animation: fadeInUp 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both !important;
+        color: rgba(255, 255, 255, 0.95) !important;
+        font-size: 1.25rem !important;
+        font-weight: 400 !important;
+        margin-bottom: 3rem !important;
+        animation: fadeInUp 0.8s ease-out !important;
         letter-spacing: 0.3px !important;
     }
     
     h2 {
-        color: #f5f1ff !important;
+        color: #2d3748 !important;
         font-family: 'Poppins', sans-serif !important;
-        font-size: 2rem !important;
-        font-weight: 700 !important;
-        animation: fadeInUp 0.7s ease-out !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+        font-size: 1.875rem !important;
+        font-weight: 600 !important;
+        margin: 2rem 0 1rem 0 !important;
     }
     
     h3 {
-        color: #d4a5ff !important;
-        font-family: 'Poppins', sans-serif !important;
+        color: #4a5568 !important;
         font-weight: 600 !important;
-        animation: fadeInUp 0.6s ease-out !important;
-        transition: color 0.4s ease !important;
-    }
-    
-    h4 {
-        color: #e9b3fb !important;
-        font-weight: 600 !important;
-    }
-    
-    /* Generated content text - OFF-WHITE for visibility */
-    .generated-content {
-        color: #f5f1ff !important;
-        background: rgba(20, 15, 40, 0.7) !important;
-        border: 1px solid rgba(111, 0, 255, 0.2) !important;
-        border-radius: 12px !important;
-        padding: 1.5rem !important;
-        line-height: 1.7 !important;
-        font-size: 1rem !important;
-        animation: fadeInUp 0.7s ease-out !important;
-        transition: all 0.4s ease !important;
-    }
-    
-    .generated-content:hover {
-        border-color: rgba(233, 179, 251, 0.4) !important;
-        background: rgba(20, 15, 40, 0.9) !important;
+        font-size: 1.25rem !important;
+        margin: 1.5rem 0 0.75rem 0 !important;
     }
     
     p, label, span {
-        color: #e0d5ff !important;
+        color: #4a5568 !important;
+        line-height: 1.6 !important;
     }
     
-    /* Header section with image */
-    .header-section {
-        position: relative;
-        height: 320px;
-        border-radius: 18px;
-        overflow: hidden;
-        margin-bottom: 2.5rem;
-        box-shadow: 0 15px 50px rgba(111, 0, 255, 0.25);
-        animation: fadeInUp 0.7s ease-out !important;
-        border: 2px solid rgba(233, 179, 251, 0.1);
-        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* Card System */
+    .modern-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        animation: fadeInUp 0.5s ease-out;
+        border: 1px solid rgba(226, 232, 240, 0.8);
     }
     
-    .header-section:hover {
-        box-shadow: 0 20px 70px rgba(111, 0, 255, 0.35);
-        border-color: rgba(233, 179, 251, 0.2);
-        transform: translateY(-2px);
+    .modern-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
     
-    .header-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        filter: brightness(0.65) contrast(1.15) saturate(1.1);
-        transition: filter 0.6s ease !important;
-    }
-    
-    .header-section:hover .header-image {
-        filter: brightness(0.75) contrast(1.2) saturate(1.2);
-    }
-    
-    .header-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(111, 0, 255, 0.35), rgba(59, 2, 112, 0.55));
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-    
-    .header-title {
-        font-family: 'Poppins', sans-serif !important;
-        font-size: 2.5rem !important;
-        font-weight: 800 !important;
-        color: #ffffff !important;
-        text-align: center;
-        text-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
-        animation: slideInDown 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-        letter-spacing: -0.5px !important;
-    }
-    
-    .header-subtitle {
-        font-size: 1.1rem !important;
-        color: #e9b3fb !important;
-        text-align: center;
-        text-shadow: 0 3px 12px rgba(0, 0, 0, 0.6);
-        margin-top: 0.7rem;
-        animation: fadeInUp 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s both !important;
-        font-weight: 500 !important;
-    }
-    
+    /* Button Styles */
     .stButton > button {
-        background: linear-gradient(135deg, #8B5CF6, #6F00FF) !important;
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important;
-        border: 2px solid #6F00FF !important;
-        border-radius: 10px !important;
-        font-weight: 700 !important;
-        padding: 0.85rem 1.8rem !important;
-        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
-        box-shadow: 0 6px 30px rgba(111, 0, 255, 0.4) !important;
+        border: none !important;
+        padding: 0.875rem 2rem !important;
         font-size: 1rem !important;
+        font-weight: 600 !important;
+        border-radius: 12px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 14px 0 rgba(102, 126, 234, 0.4) !important;
+        letter-spacing: 0.3px !important;
     }
     
     .stButton > button:hover {
-        transform: translateY(-4px) scale(1.02) !important;
-        box-shadow: 0 12px 50px rgba(111, 0, 255, 0.6) !important;
-        background: linear-gradient(135deg, #A78BFA, #7C3AED) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6) !important;
     }
     
     .stButton > button:active {
-        transform: translateY(-1px) scale(0.98) !important;
+        transform: translateY(0) !important;
     }
     
-    .stTextInput > div > div > input {
-        background: rgba(15, 15, 35, 0.7) !important;
-        border: 2px solid rgba(111, 0, 255, 0.2) !important;
-        border-radius: 10px !important;
-        color: #f5f1ff !important;
-        transition: all 0.3s ease !important;
-        font-size: 1rem !important;
-    }
-    
-    .stTextInput > div > div > input:focus {
-        border-color: rgba(233, 179, 251, 0.5) !important;
-        box-shadow: 0 0 15px rgba(111, 0, 255, 0.2) !important;
-        background: rgba(15, 15, 35, 0.9) !important;
-    }
-    
-    .stTextArea > div > div > textarea {
-        background: rgba(15, 15, 35, 0.7) !important;
-        border: 2px solid rgba(111, 0, 255, 0.2) !important;
-        border-radius: 10px !important;
-        color: #f5f1ff !important;
-        font-family: 'Monaco', monospace !important;
-        transition: all 0.3s ease !important;
-        font-size: 1rem !important;
-    }
-    
-    .stTextArea > div > div > textarea:focus {
-        border-color: rgba(233, 179, 251, 0.5) !important;
-        box-shadow: 0 0 15px rgba(111, 0, 255, 0.2) !important;
-        background: rgba(15, 15, 35, 0.9) !important;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: rgba(26, 10, 46, 0.5) !important;
+    /* Alert Cards */
+    .success-card {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%) !important;
+        border-left: 4px solid #28a745 !important;
         border-radius: 12px !important;
-        border-bottom: 2px solid rgba(111, 0, 255, 0.1) !important;
-        gap: 0.5rem !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #155724 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15) !important;
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%) !important;
+        border-left: 4px solid #17a2b8 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #0c5460 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(23, 162, 184, 0.15) !important;
+    }
+    
+    .warning-card {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%) !important;
+        border-left: 4px solid #ffc107 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #856404 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15) !important;
+    }
+    
+    .error-card {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%) !important;
+        border-left: 4px solid #dc3545 !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        margin: 1rem 0 !important;
+        color: #721c24 !important;
+        animation: slideIn 0.4s ease-out !important;
+        box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15) !important;
+    }
+    
+    /* Metric Cards */
+    .metric-card {
+        background: white !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid #e2e8f0 !important;
+        transition: all 0.3s ease !important;
+        text-align: center;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.3) !important;
+        border-color: #667eea !important;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0.5rem 0;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: #718096;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+        background: white;
+        padding: 0.75rem;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
     }
     
     .stTabs [data-baseweb="tab"] {
         border-radius: 10px !important;
-        color: #9d88b8 !important;
-        transition: all 0.4s ease !important;
+        padding: 0.875rem 1.75rem;
         font-weight: 600 !important;
+        color: #718096 !important;
+        transition: all 0.3s ease !important;
+        border: none !important;
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(111, 0, 255, 0.3), rgba(59, 2, 112, 0.2)) !important;
-        color: #e9b3fb !important;
-        border-bottom: 3px solid #6F00FF !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
     }
     
-    .success-card {
-        background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08)) !important;
-        border-left: 4px solid #22c55e !important;
-        border-radius: 10px !important;
-        padding: 1.2rem !important;
-        color: #86efac !important;
-        animation: fadeInUp 0.5s ease-out !important;
-        font-weight: 500 !important;
+    /* Input Fields */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea {
+        background: white !important;
+        border: 2px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        color: #2d3748 !important;
+        transition: all 0.3s ease !important;
+        padding: 0.75rem 1rem !important;
     }
     
-    .info-card {
-        background: linear-gradient(135deg, rgba(111, 0, 255, 0.15), rgba(59, 2, 112, 0.1)) !important;
-        border-left: 4px solid #8B5CF6 !important;
-        border-radius: 10px !important;
-        padding: 1.2rem !important;
-        color: #e9b3fb !important;
-        animation: fadeInUp 0.5s ease-out !important;
-        font-weight: 500 !important;
+    .stTextInput > div > div > input:focus,
+    .stTextArea > div > div > textarea:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
     }
     
-    .warning-card {
-        background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08)) !important;
-        border-left: 4px solid #ef4444 !important;
-        border-radius: 10px !important;
-        padding: 1.2rem !important;
-        color: #fca5a5 !important;
-        animation: fadeInUp 0.5s ease-out !important;
-        font-weight: 500 !important;
+    /* File Uploader */
+    .uploadedFile {
+        border-radius: 12px;
+        border: 2px dashed #cbd5e0 !important;
+        padding: 1.5rem;
+        background: #f7fafc !important;
+        transition: all 0.3s ease;
+    }
+    
+    .uploadedFile:hover {
+        border-color: #667eea !important;
+        background: #edf2f7 !important;
+    }
+    
+    /* Expander */
+    div[data-testid="stExpander"] {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0 !important;
+        background: white !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* Sidebar */
+    section[data-testid="stSidebar"] > div {
+        background: white;
+        padding: 2rem 1.5rem;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    section[data-testid="stSidebar"] h3 {
+        color: #2d3748 !important;
+        font-size: 1.125rem !important;
+        font-weight: 700 !important;
+        margin: 1.5rem 0 1rem 0 !important;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    section[data-testid="stSidebar"] h4 {
+        color: #4a5568 !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        margin: 1.25rem 0 0.5rem 0 !important;
+    }
+    
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] li {
+        color: #718096 !important;
+        font-size: 0.875rem !important;
+        line-height: 1.6 !important;
+    }
+    
+    section[data-testid="stSidebar"] hr {
+        margin: 1.5rem 0;
+        border: none;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    /* Links */
+    .api-link {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .api-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
     }
     
     a {
-        color: #8B5CF6 !important;
+        color: #667eea !important;
         text-decoration: none !important;
+        font-weight: 500;
         transition: color 0.3s ease !important;
     }
     
     a:hover {
-        color: #e9b3fb !important;
+        color: #764ba2 !important;
+    }
+    
+    /* Banner */
+    .banner {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid #667eea;
+        animation: fadeInUp 0.6s ease-out;
+    }
+    
+    .banner h2 {
+        margin: 0 0 0.5rem 0 !important;
+        color: #2d3748 !important;
+    }
+    
+    .banner p {
+        margin: 0;
+        color: #718096 !important;
+        font-size: 1rem;
+    }
+    
+    /* Loading Animation */
+    .stSpinner > div {
+        border-color: #667eea !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 5px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: #764ba2;
     }
     </style>
 """, unsafe_allow_html=True)
-
-# Get API keys from environment variables
-openai_api_key = os.getenv("OPENAI_API_KEY", "")
-gemini_api_key = os.getenv("GEMINI_API_KEY", "")
-
-# Verify API keys are configured
-if not openai_api_key or not gemini_api_key:
-    st.error("⚠️ Missing API Keys! Please configure OPENAI_API_KEY and GEMINI_API_KEY environment variables.")
-    st.stop()
 
 # Initialize session state
 if 'transcript' not in st.session_state:
@@ -378,22 +428,139 @@ if 'minutes' not in st.session_state:
 if 'processing' not in st.session_state:
     st.session_state.processing = False
 
-# Main Header
+# Utility function for exponential backoff
+def exponential_backoff(fn, max_retries=4, initial_delay=1.0):
+    """Retry function with exponential backoff for rate limiting"""
+    delay = initial_delay
+    for attempt in range(max_retries):
+        try:
+            return fn()
+        except Exception as e:
+            msg = str(e).lower()
+            if '429' in msg or 'quota' in msg or 'rate limit' in msg or 'exceeded' in msg:
+                if attempt < max_retries - 1:
+                    time.sleep(delay)
+                    delay *= 2
+                    continue
+                else:
+                    raise
+            else:
+                raise
+
+# Header
 st.markdown("<h1>📝 Smart Meeting Minutes</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>✨ Transform your meeting recordings into actionable insights with AI ✨</p>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Transform your meeting recordings into actionable insights with AI</p>", unsafe_allow_html=True)
+
+# Sidebar Configuration
+with st.sidebar:
+    st.markdown("### 🔐 API Configuration")
+    st.markdown("Configure your API keys to unlock AI-powered features")
+    
+    st.markdown("---")
+    
+    # OpenAI Section
+    st.markdown("#### 🔑 OpenAI API Key")
+    st.caption("Required for audio transcription")
+    openai_api_key = st.text_input(
+        "OpenAI API Key",
+        type="password",
+        placeholder="sk-...",
+        value=os.getenv("OPENAI_API_KEY", ""),
+        key="openai_key",
+        label_visibility="collapsed"
+    )
+    
+    if openai_api_key:
+        st.success("✅ OpenAI configured")
+    else:
+        st.warning("⚠️ OpenAI key required")
+        st.markdown("""
+        <a href='https://platform.openai.com/api-keys' target='_blank' class='api-link'>
+            Get API Key
+        </a>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br/>", unsafe_allow_html=True)
+    
+    # Gemini Section
+    st.markdown("#### 🤖 Google Gemini API Key")
+    st.caption("Required for generating meeting minutes")
+    gemini_api_key = st.text_input(
+        "Gemini API Key",
+        type="password",
+        placeholder="AIza...",
+        value=os.getenv("GEMINI_API_KEY", ""),
+        key="gemini_key",
+        label_visibility="collapsed"
+    )
+    
+    if gemini_api_key:
+        st.success("✅ Gemini configured")
+        
+        if st.button("🧪 Test Connection", use_container_width=True):
+            with st.spinner("Testing API..."):
+                try:
+                    genai.configure(api_key=gemini_api_key)
+                    model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                    response = model.generate_content("Say 'OK'")
+                    
+                    if response.text:
+                        st.success(f"✅ Connected successfully!")
+                    else:
+                        raise Exception("No response")
+                except Exception as e:
+                    error_msg = str(e)
+                    if '429' in error_msg or 'quota' in error_msg.lower():
+                        st.error("❌ Quota exceeded. Try again later or check your billing.")
+                    else:
+                        st.error(f"❌ Connection failed: {error_msg[:50]}")
+    else:
+        st.warning("⚠️ Gemini key required")
+        st.markdown("""
+        <a href='https://aistudio.google.com/app/apikey' target='_blank' class='api-link'>
+            Get API Key
+        </a>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Quick Guide
+    st.markdown("### 📚 How It Works")
+    st.markdown("""
+    1. **Configure** your API keys above
+    2. **Upload** audio or paste transcript
+    3. **Generate** AI-powered minutes
+    4. **Download** in multiple formats
+    """)
+    
+    st.markdown("---")
+    
+    # Features
+    st.markdown("### ✨ Key Features")
+    st.markdown("""
+    - 🎤 Audio transcription
+    - 🤖 AI analysis
+    - ✅ Action items
+    - 👥 Participant tracking
+    - 📥 Export options
+    """)
+    
+    st.markdown("---")
+    
+    # Pricing
+    st.markdown("### 💰 Pricing")
+    st.markdown("**OpenAI:** $0.006/min")
+    st.markdown("**Gemini:** FREE (1M tokens/day)")
 
 # Main Tabs
 tab1, tab2, tab3 = st.tabs(["🎤 Upload Audio", "✍️ Paste Transcript", "📊 Results"])
 
+# TAB 1: Upload Audio
 with tab1:
-    # Header with background image
     st.markdown("""
-        <div class='header-section'>
-            <img src='https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=400&fit=crop' class='header-image' alt='Audio Recording'>
-            <div class='header-overlay'>
-                <div class='header-title'>🎤 Upload Meeting Recording</div>
-                <div class='header-subtitle'>Convert your audio files into transcriptions instantly</div>
-            </div>
+        <div class='banner'>
+            <h2>🎤 Upload Meeting Recording</h2>
+            <p>Upload your audio file and let AI transcribe it automatically using OpenAI Whisper</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -401,9 +568,9 @@ with tab1:
     
     with col1:
         audio_file = st.file_uploader(
-            "Drop your audio file here",
+            "Choose an audio file",
             type=['mp3', 'wav', 'm4a', 'ogg', 'flac', 'webm'],
-            help="Supported: MP3, WAV, M4A, OGG, FLAC, WebM"
+            help="Supported formats: MP3, WAV, M4A, OGG, FLAC, WebM"
         )
         
         if audio_file:
@@ -411,57 +578,72 @@ with tab1:
             st.markdown(f"""
                 <div class='success-card'>
                     <strong>✅ File Uploaded Successfully</strong><br/>
-                    📁 {audio_file.name} | 💾 {file_size_mb:.2f} MB
+                    📁 {audio_file.name}<br/>
+                    💾 Size: {file_size_mb:.2f} MB
                 </div>
             """, unsafe_allow_html=True)
             
             st.audio(audio_file)
             
-            if st.button("🚀 Transcribe Audio with AI", key="transcribe_btn", use_container_width=True):
-                with st.spinner("🎯 Transcribing audio... Please wait..."):
-                    try:
-                        client = OpenAI(api_key=openai_api_key)
-                        
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(audio_file.name)[1]) as tmp_file:
-                            tmp_file.write(audio_file.getvalue())
-                            tmp_file_path = tmp_file.name
-                        
-                        with open(tmp_file_path, "rb") as audio_data:
-                            transcript_response = client.audio.transcriptions.create(
-                                model="whisper-1",
-                                file=audio_data,
-                                response_format="text"
-                            )
-                        
-                        os.unlink(tmp_file_path)
-                        st.session_state.transcript = transcript_response
-                        st.markdown('<div class="success-card"><strong>✅ Transcription completed!</strong></div>', unsafe_allow_html=True)
-                        st.balloons()
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.markdown(f'<div class="warning-card"><strong>❌ Transcription failed: {str(e)[:100]}</strong></div>', unsafe_allow_html=True)
+            st.markdown("<br/>", unsafe_allow_html=True)
+            
+            if st.button("🚀 Transcribe Audio", key="transcribe_btn", use_container_width=True):
+                if not openai_api_key:
+                    st.error("⚠️ Please enter your OpenAI API key in the sidebar first!", icon="⚠️")
+                else:
+                    with st.spinner("🎯 Transcribing audio... Please wait..."):
+                        try:
+                            client = OpenAI(api_key=openai_api_key)
+                            
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(audio_file.name)[1]) as tmp_file:
+                                tmp_file.write(audio_file.getvalue())
+                                tmp_file_path = tmp_file.name
+                            
+                            with open(tmp_file_path, "rb") as audio_data:
+                                transcript_response = client.audio.transcriptions.create(
+                                    model="whisper-1",
+                                    file=audio_data,
+                                    response_format="text"
+                                )
+                            
+                            os.unlink(tmp_file_path)
+                            st.session_state.transcript = transcript_response
+                            
+                            st.success("✅ Transcription completed successfully!", icon="✅")
+                            st.balloons()
+                            st.rerun()
+                            
+                        except Exception as e:
+                            st.error(f"❌ Transcription failed: {str(e)}", icon="❌")
+                            if 'tmp_file_path' in locals() and os.path.exists(tmp_file_path):
+                                os.unlink(tmp_file_path)
     
     with col2:
         st.markdown("""
             <div class='info-card'>
-                <strong>💡 Tips</strong><br/><br/>
+                <strong>💡 Best Practices</strong><br/><br/>
                 ✓ Clear audio quality<br/>
-                ✓ Low background noise<br/>
-                ✓ Max: 25 MB<br/>
-                ✓ MP3, WAV, M4A
+                ✓ Minimal background noise<br/>
+                ✓ Max file size: 25 MB<br/>
+                ✓ Supported: MP3, WAV, M4A
             </div>
         """, unsafe_allow_html=True)
+        
+        if audio_file:
+            est_time = (file_size_mb * 0.3)
+            st.markdown(f"""
+                <div class='warning-card'>
+                    <strong>⏱️ Estimated Time</strong><br/>
+                    Processing: ~{est_time:.1f} min
+                </div>
+            """, unsafe_allow_html=True)
 
+# TAB 2: Paste Transcript
 with tab2:
-    # Header with background image
     st.markdown("""
-        <div class='header-section'>
-            <img src='https://images.unsplash.com/photo-1484480974693-6ca0a78fb36b?w=1200&h=400&fit=crop' class='header-image' alt='Transcript'>
-            <div class='header-overlay'>
-                <div class='header-title'>✍️ Paste Meeting Transcript</div>
-                <div class='header-subtitle'>Enter your meeting transcript and generate AI-powered minutes</div>
-            </div>
+        <div class='banner'>
+            <h2>✍️ Manual Transcript Input</h2>
+            <p>Already have a transcript? Paste it here and generate AI-powered meeting minutes</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -469,45 +651,46 @@ with tab2:
     
     with col1:
         transcript_input = st.text_area(
-            "Paste your meeting transcript here:",
+            "Paste your meeting transcript",
             value=st.session_state.transcript,
             height=400,
-            placeholder="Enter or paste your meeting transcript here..."
+            placeholder="Enter or paste your meeting transcript here...\n\nExample:\nJohn: Welcome everyone to today's meeting.\nSarah: Thanks John, let's start with the agenda...",
+            help="Paste your existing transcript to skip audio transcription"
         )
     
     with col2:
         if st.button("💾 Save Transcript", key="save_transcript", use_container_width=True):
             if transcript_input.strip():
                 st.session_state.transcript = transcript_input
-                st.markdown('<div class="success-card"><strong>✅ Saved!</strong></div>', unsafe_allow_html=True)
+                st.success("✅ Transcript saved!", icon="✅")
             else:
-                st.markdown('<div class="warning-card"><strong>⚠️ Enter text first</strong></div>', unsafe_allow_html=True)
+                st.warning("⚠️ Please enter some text first", icon="⚠️")
         
         st.markdown("<br/>", unsafe_allow_html=True)
         
         if st.button("🧪 Load Demo", key="demo_btn", use_container_width=True):
-            st.session_state.transcript = """Welcome everyone to today's product planning meeting.
+            st.session_state.transcript = """Welcome everyone to today's product planning meeting. Let's start with our agenda.
 
-John: Thanks for joining. Today we discuss Q1 roadmap, customer feature requests, and sprint planning.
+John: Thanks for joining everyone. Today we need to discuss three main items: the Q1 product roadmap, the new feature requests from customers, and our sprint planning for the next two weeks.
 
-Sarah: The mobile app prototype got great feedback. We should prioritize push notifications - customers have requested it.
+Sarah: Great. On the roadmap side, we've received really positive feedback on the mobile app prototype. I think we should prioritize the push notification feature that users have been requesting.
 
-Mike: Agreed on Sarah's point. Analytics dashboard is gaining traction too. But we need infrastructure upgrades for increased load.
+Mike: I agree with Sarah. The analytics dashboard is also getting traction. However, I'm concerned about our backend infrastructure. We need to upgrade our servers before we can handle the increased load.
 
-John: Good point Mike. Add infrastructure to action items. Sarah, lead push notifications?
+John: Good point Mike. Let's add infrastructure upgrades to the action items. Sarah, can you lead the push notification feature development?
 
-Sarah: Absolutely. 3 weeks needed. I'll coordinate with design this week.
+Sarah: Absolutely. I'll need about 3 weeks for the full implementation. I'll coordinate with the design team this week.
 
-Mike: I'll assess infrastructure and present options by Monday.
+Mike: I'll work on the infrastructure assessment and present options by next Monday.
 
-Lisa: We have 5 requests for dark mode. Should we include this in Q1?
+Lisa: One more thing - we have 5 customer requests for the dark mode feature. Should we consider this for Q1?
 
-John: Let's evaluate. Lisa, compile feedback and business case by Friday?
+John: Let's evaluate that. Lisa, can you compile the customer feedback and business case by Friday?
 
 Lisa: Will do.
 
-John: Summary: Sarah on push notifications, Mike on infrastructure, Lisa on dark mode case. Meet Tuesday. Thanks!"""
-            st.markdown('<div class="success-card"><strong>✅ Demo loaded!</strong></div>', unsafe_allow_html=True)
+John: Perfect. To summarize: Sarah is leading push notifications, Mike is assessing infrastructure, and Lisa is preparing the dark mode business case. Let's reconvene next Tuesday. Thanks everyone!"""
+            st.success("✅ Demo transcript loaded!", icon="✅")
             st.rerun()
 
 # TAB 3: Results
@@ -515,95 +698,321 @@ with tab3:
     if st.session_state.transcript:
         
         with st.expander("📄 View Original Transcript", expanded=False):
-            st.text_area("Transcript Content", st.session_state.transcript, height=300, disabled=True)
+            st.text_area("Transcript Content", st.session_state.transcript, height=300, disabled=True, label_visibility="collapsed")
         
         st.markdown("<br/>", unsafe_allow_html=True)
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("🚀 Generate Meeting Minutes with AI", key="generate_btn", use_container_width=True):
-                with st.spinner("🤖 Generating minutes with AI..."):
-                    try:
-                        genai.configure(api_key=gemini_api_key)
-                        model = genai.GenerativeModel('gemini-2.0-flash')
-                        
-                        prompt = f"""Analyze this meeting transcript and generate comprehensive meeting minutes:
-
-MEETING SUMMARY
-===============
-[2-3 sentence overview]
-
-KEY DISCUSSION POINTS
-====================
-- Point 1
-- Point 2
-- Point 3
-
-ACTION ITEMS
-============
-[ ] Owner: Task - Due date
-[ ] Owner: Task - Due date
-
-DECISIONS MADE
-==============
-- Decision 1
-- Decision 2
-
-PARTICIPANTS
-============
-[List of people]
-
-NEXT STEPS
-==========
-[Key follow-ups]
+            if st.button("🚀 Generate Meeting Minutes", key="generate_btn", use_container_width=True):
+                if not gemini_api_key:
+                    st.error("⚠️ Please enter your Gemini API key in the sidebar first!", icon="⚠️")
+                else:
+                    with st.spinner("🤖 Generating comprehensive meeting minutes..."):
+                        try:
+                            genai.configure(api_key=gemini_api_key)
+                            
+                            prompt = f"""Analyze this meeting transcript and generate comprehensive meeting minutes in JSON format.
 
 Transcript:
-{st.session_state.transcript}"""
-                        
-                        response = model.generate_content(prompt)
-                        st.session_state.minutes = response.text
-                        
-                        st.markdown('<div class="success-card"><strong>✅ Minutes generated successfully!</strong></div>', unsafe_allow_html=True)
-                        st.rerun()
-                        
-                    except Exception as e:
-                        st.markdown(f'<div class="warning-card"><strong>❌ Generation failed: {str(e)[:80]}</strong></div>', unsafe_allow_html=True)
+{st.session_state.transcript}
+
+Return ONLY valid JSON in this exact structure:
+{{
+    "meeting_title": "Brief descriptive title",
+    "date": "{datetime.now().strftime('%B %d, %Y')}",
+    "participants": ["Name1", "Name2"],
+    "summary": "2-3 sentence executive summary",
+    "key_points": ["Point 1", "Point 2"],
+    "decisions": ["Decision 1", "Decision 2"],
+    "action_items": [
+        {{
+            "task": "Task description",
+            "assignee": "Person name",
+            "deadline": "Deadline or timeframe"
+        }}
+    ],
+    "next_meeting": "Next meeting info or null"
+}}"""
+                            
+                            model_names = [
+                                'gemini-2.0-flash-exp',
+                                'gemini-1.5-flash',
+                                'gemini-1.5-pro',
+                                'models/gemini-2.0-flash-exp',
+                                'models/gemini-1.5-flash'
+                            ]
+                            
+                            minutes_json = None
+                            working_model_name = None
+                            
+                            for model_name in model_names:
+                                try:
+                                    def try_model():
+                                        model = genai.GenerativeModel(model_name)
+                                        resp = model.generate_content(prompt)
+                                        txt = getattr(resp, 'text', None)
+                                        if not txt:
+                                            raise Exception("Empty response")
+                                        return txt
+                                    
+                                    response_text = exponential_backoff(try_model, max_retries=3, initial_delay=2.0)
+                                    response_text = response_text.strip().replace("```json", "").replace("```", "").strip()
+                                    minutes_json = json.loads(response_text)
+                                    working_model_name = model_name
+                                    break
+                                    
+                                except Exception as model_err:
+                                    error_msg = str(model_err).lower()
+                                    if '429' in error_msg or 'quota' in error_msg or 'exceeded' in error_msg:
+                                        st.warning(f"⚠️ {model_name}: Quota exceeded, trying next model...", icon="⚠️")
+                                        continue
+                                    else:
+                                        continue
+                            
+                            if not minutes_json:
+                                st.markdown("""
+                                    <div class='error-card'>
+                                        <strong>❌ All Gemini models are currently unavailable</strong><br/><br/>
+                                        <strong>Possible reasons:</strong><br/>
+                                        • API quota exceeded (429 error)<br/>
+                                        • Rate limit reached<br/>
+                                        • Billing issue<br/><br/>
+                                        <strong>Solutions:</strong><br/>
+                                        1. Wait a few minutes and try again<br/>
+                                        2. Check your quota at <a href='https://aistudio.google.com' target='_blank'>Google AI Studio</a><br/>
+                                        3. Verify billing is enabled<br/>
+                                        4. Try using a different API key
+                                    </div>
+                                """, unsafe_allow_html=True)
+                                st.stop()
+                            
+                            st.session_state.minutes = minutes_json
+                            st.success(f"✅ Minutes generated using {working_model_name}!", icon="✅")
+                            st.balloons()
+                            st.rerun()
+                            
+                        except json.JSONDecodeError as e:
+                            st.error(f"❌ Invalid JSON response: {str(e)}", icon="❌")
+                        except Exception as e:
+                            error_msg = str(e)
+                            if '429' in error_msg or 'quota' in error_msg.lower():
+                                st.markdown("""
+                                    <div class='error-card'>
+                                        <strong>❌ API Quota Exceeded</strong><br/><br/>
+                                        Your Gemini API quota has been exceeded. Please:<br/>
+                                        1. Wait a few minutes and try again<br/>
+                                        2. Check your quota at <a href='https://aistudio.google.com' target='_blank'>Google AI Studio</a><br/>
+                                        3. Verify your API key is correct<br/>
+                                        4. Ensure billing is enabled if using paid tier
+                                    </div>
+                                """, unsafe_allow_html=True)
+                            else:
+                                st.error(f"❌ Generation failed: {error_msg}", icon="❌")
         
         if st.session_state.minutes:
-            st.markdown("---")
-            st.markdown("<h2>📋 Generated Meeting Minutes</h2>", unsafe_allow_html=True)
-            st.markdown(f'<div class="generated-content">{st.session_state.minutes}</div>', unsafe_allow_html=True)
+            st.markdown("<br/><br/>", unsafe_allow_html=True)
             
-            col1, col2 = st.columns(2)
+            st.markdown("""
+                <div class='banner'>
+                    <h2>📋 Generated Meeting Minutes</h2>
+                    <p>AI-powered analysis of your meeting transcript</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            minutes = st.session_state.minutes
+            
+            # Metrics Row
+            col1, col2, col3, col4 = st.columns(4)
+            
             with col1:
-                txt_data = st.session_state.minutes
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>📅</div>
+                        <div class='metric-label'>Date</div>
+                        <div class='metric-value' style='font-size: 1rem; color: #4a5568;'>{minutes.get('date', 'N/A')}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>👥</div>
+                        <div class='metric-label'>Participants</div>
+                        <div class='metric-value'>{len(minutes.get('participants', []))}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>✅</div>
+                        <div class='metric-label'>Action Items</div>
+                        <div class='metric-value'>{len(minutes.get('action_items', []))}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                st.markdown(f"""
+                    <div class='metric-card'>
+                        <div style='font-size: 2rem;'>🎯</div>
+                        <div class='metric-label'>Decisions</div>
+                        <div class='metric-value'>{len(minutes.get('decisions', []))}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("<br/>", unsafe_allow_html=True)
+            
+            # Content Grid
+            col1, col2 = st.columns([1, 1])
+            
+            with col1:
+                st.markdown("### 📋 Executive Summary")
+                st.markdown(f"""
+                    <div class='info-card'>
+                        {minutes.get('summary', 'N/A')}
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                st.markdown("### 👥 Participants")
+                for p in minutes.get('participants', []):
+                    st.markdown(f"• **{p}**")
+                
+                st.markdown("### 💡 Key Discussion Points")
+                for i, point in enumerate(minutes.get('key_points', []), 1):
+                    st.markdown(f"**{i}.** {point}")
+            
+            with col2:
+                st.markdown("### ✅ Decisions Made")
+                for i, decision in enumerate(minutes.get('decisions', []), 1):
+                    st.markdown(f"""
+                        <div class='success-card'>
+                            <strong>{i}.</strong> {decision}
+                        </div>
+                    """, unsafe_allow_html=True)
+                
+                if minutes.get('next_meeting'):
+                    st.markdown("### 📅 Next Meeting")
+                    st.info(minutes.get('next_meeting'), icon="📅")
+            
+            # Action Items
+            st.markdown("---")
+            st.markdown("### 🎯 Action Items")
+            
+            for i, item in enumerate(minutes.get('action_items', []), 1):
+                col1, col2, col3 = st.columns([3, 2, 2])
+                with col1:
+                    st.markdown(f"**{i}. {item.get('task', 'N/A')}**")
+                with col2:
+                    st.markdown(f"👤 **{item.get('assignee', 'Unassigned')}**")
+                with col3:
+                    st.markdown(f"📅 **{item.get('deadline', 'No deadline')}**")
+                st.markdown("---")
+            
+            # Export Section
+            st.markdown("### 📥 Export Meeting Minutes")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                minutes_text = f"""MEETING MINUTES
+{'=' * 60}
+
+Meeting: {minutes.get('meeting_title', 'N/A')}
+Date: {minutes.get('date', 'N/A')}
+
+PARTICIPANTS
+{'-' * 60}
+{chr(10).join('• ' + p for p in minutes.get('participants', []))}
+
+EXECUTIVE SUMMARY
+{'-' * 60}
+{minutes.get('summary', 'N/A')}
+
+KEY DISCUSSION POINTS
+{'-' * 60}
+{chr(10).join(f'{i}. {p}' for i, p in enumerate(minutes.get('key_points', []), 1))}
+
+DECISIONS MADE
+{'-' * 60}
+{chr(10).join(f'{i}. {d}' for i, d in enumerate(minutes.get('decisions', []), 1))}
+
+ACTION ITEMS
+{'-' * 60}
+{chr(10).join(f'{i}. {item.get("task", "N/A")} - {item.get("assignee", "N/A")} - Due: {item.get("deadline", "N/A")}' for i, item in enumerate(minutes.get('action_items', []), 1))}
+
+NEXT MEETING
+{'-' * 60}
+{minutes.get('next_meeting', 'N/A')}
+"""
                 st.download_button(
-                    label="📥 Download as TXT",
-                    data=txt_data,
+                    label="📄 Download TXT",
+                    data=minutes_text,
                     file_name=f"minutes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
                     mime="text/plain",
                     use_container_width=True
                 )
             
             with col2:
-                json_data = {
-                    "timestamp": datetime.now().isoformat(),
-                    "transcript": st.session_state.transcript,
-                    "minutes": st.session_state.minutes
-                }
                 st.download_button(
-                    label="📥 Download as JSON",
-                    data=json.dumps(json_data, indent=2),
+                    label="📊 Download JSON",
+                    data=json.dumps(minutes, indent=2),
                     file_name=f"minutes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
                     mime="application/json",
                     use_container_width=True
                 )
+            
+            with col3:
+                markdown_text = f"""# {minutes.get('meeting_title', 'Meeting Minutes')}
+
+**Date:** {minutes.get('date', 'N/A')}
+
+## 👥 Participants
+{chr(10).join('- ' + p for p in minutes.get('participants', []))}
+
+## 📋 Executive Summary
+{minutes.get('summary', 'N/A')}
+
+## 💡 Key Discussion Points
+{chr(10).join(f'{i}. {p}' for i, p in enumerate(minutes.get('key_points', []), 1))}
+
+## ✅ Decisions Made
+{chr(10).join(f'{i}. {d}' for i, d in enumerate(minutes.get('decisions', []), 1))}
+
+## 🎯 Action Items
+{chr(10).join(f'- **{item.get("task", "N/A")}** - Assigned to: {item.get("assignee", "N/A")} - Due: {item.get("deadline", "N/A")}' for item in minutes.get('action_items', []))}
+
+## 📅 Next Meeting
+{minutes.get('next_meeting', 'N/A')}
+"""
+                st.download_button(
+                    label="📝 Download MD",
+                    data=markdown_text,
+                    file_name=f"minutes_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+    
     else:
         st.markdown("""
-            <div class='info-card'>
-                <strong>📝 No transcript yet</strong><br/><br/>
-                1. Upload audio or paste transcript<br/>
-                2. Click "Generate Minutes"<br/>
-                3. Download results
+            <div class='banner' style='text-align: center; padding: 4rem 2rem;'>
+                <h2>👈 Get Started</h2>
+                <p style='font-size: 1.125rem; margin-top: 1rem;'>
+                    Upload an audio file or paste a transcript to generate AI-powered meeting minutes
+                </p>
             </div>
         """, unsafe_allow_html=True)
+
+# Footer
+st.markdown("<br/><br/>", unsafe_allow_html=True)
+st.markdown("---")
+st.markdown("""
+    <div style='text-align: center; padding: 2rem; color: white;'>
+        <p style='font-size: 1.1rem; margin-bottom: 0.5rem; color: rgba(255,255,255,0.9);'>
+            Built with ❤️ using Streamlit, OpenAI Whisper & Google Gemini
+        </p>
+        <p style='color: rgba(255,255,255,0.7);'>
+            🚀 Transform meetings into actionable insights in seconds
+        </p>
+    </div>
+""", unsafe_allow_html=True)
